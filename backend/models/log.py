@@ -8,8 +8,8 @@
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
 
-# 从app.py导入db实例
-from app import db
+# 全局db变量，将在app.py中初始化
+db = None
 
 class OperationLog(db.Model):
     """操作日志模型类"""
@@ -60,11 +60,15 @@ class OperationLog(db.Model):
     
     def to_dict(self):
         """转换为字典格式"""
+        # 延迟导入避免循环依赖
+        from .user import AdminUser
+        operator = AdminUser.query.get(self.operator_id)
+        
         return {
             'id': self.id,
             'operator_id': self.operator_id,
-            'operator_name': self.operator.username if self.operator else None,
-            'operator_role': self.operator.role if self.operator else None,
+            'operator_name': operator.username if operator else None,
+            'operator_role': operator.role if operator else None,
             'operate_type': self.operate_type,
             'target_id': self.target_id,
             'operate_time': self.operate_time.strftime('%Y-%m-%d %H:%M:%S') if self.operate_time else None
