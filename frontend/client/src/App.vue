@@ -1,5 +1,5 @@
 <template>
-  <div id="app">
+  <div id="app" :class="`font-size-${fontSize}`">
     <el-config-provider :size="fontSize">
       <div class="app-header">
         <div class="header-content">
@@ -55,12 +55,73 @@ const setFontSize = (size: 'small' | 'default' | 'large') => {
 }
 </script>
 
-<style scoped>
+<style>
+/* 全局字体大小控制 */
 #app {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  font-size: var(--app-font-size, 14px);
 }
+
+/* 字体大小类 */
+.font-size-small {
+  --app-font-size: 12px;
+}
+
+.font-size-default {
+  --app-font-size: 14px;
+}
+
+.font-size-large {
+  --app-font-size: 18px;
+}
+
+/* 确保主要文本元素都继承字体大小 */
+.font-size-small p,
+.font-size-small span,
+.font-size-small div:not(.el-icon),
+.font-size-small .el-card__body,
+.font-size-small .el-form-item__label,
+.font-size-small .el-table {
+  font-size: 12px !important;
+}
+
+.font-size-default p,
+.font-size-default span,
+.font-size-default div:not(.el-icon),
+.font-size-default .el-card__body,
+.font-size-default .el-form-item__label,
+.font-size-default .el-table {
+  font-size: 14px !important;
+}
+
+.font-size-large p,
+.font-size-large span,
+.font-size-large div:not(.el-icon),
+.font-size-large .el-card__body,
+.font-size-large .el-form-item__label,
+.font-size-large .el-table {
+  font-size: 18px !important;
+}
+
+/* 特殊元素的字体大小调整 */
+.font-size-small h1 { font-size: 1.8em !important; }
+.font-size-small h2 { font-size: 1.6em !important; }
+.font-size-small h3 { font-size: 1.4em !important; }
+.font-size-small .el-button { font-size: 12px !important; }
+
+.font-size-default h1 { font-size: 2em !important; }
+.font-size-default h2 { font-size: 1.8em !important; }
+.font-size-default h3 { font-size: 1.6em !important; }
+.font-size-default .el-button { font-size: 14px !important; }
+
+.font-size-large h1 { font-size: 2.4em !important; }
+.font-size-large h2 { font-size: 2.2em !important; }
+.font-size-large h3 { font-size: 2em !important; }
+.font-size-large .el-button { font-size: 18px !important; }
+.font-size-large .el-input__inner { font-size: 18px !important; }
+.font-size-large .el-card__body { font-size: 18px !important; }
 
 .app-header {
   background: linear-gradient(135deg, #409EFF 0%, #67C23A 100%);

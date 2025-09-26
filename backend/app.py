@@ -16,7 +16,7 @@ from datetime import timedelta
 app = Flask(__name__)
 
 # 应用配置
-app.config['SECRET_KEY'] = 'wheelchair-rental-system-secret-key-2024'
+app.config['SECRET_KEY'] = 'wheelchair-rental-system-secret-key-2025'
 app.config['JWT_SECRET_KEY'] = 'jwt-secret-string-wheelchair-rental'
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
 

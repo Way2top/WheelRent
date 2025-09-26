@@ -102,9 +102,9 @@ INSERT INTO admin_user (username, password_hash, role) VALUES
 
 -- 插入一些示例订单数据
 INSERT INTO formal_order (order_no, user_name, user_phone, user_address, wheelchair_id, deposit, status) VALUES
-('WR20240101001', '张三', '13800138001', '北京市朝阳区建国路1号', 1, 200.0, '已完成'),
-('WR20240101002', '李四', '13800138002', '上海市浦东新区陆家嘴路2号', 2, 80.0, '待配送'),
-('WR20240101003', '王五', '13800138003', '广州市天河区珠江路3号', 3, 120.0, '配送中');
+('WR20250915001', '张三', '13800138001', '北京市朝阳区建国路1号', 1, 200.0, '已完成'),
+('WR20250914002', '李四', '13800138002', '上海市浦东新区陆家嘴路2号', 2, 80.0, '待配送'),
+('WR20250913003', '王五', '13800138003', '广州市天河区珠江路3号', 3, 120.0, '配送中');
 
 -- 插入一些操作日志数据
 INSERT INTO operation_log (operator_id, operate_type, target_id) VALUES

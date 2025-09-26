@@ -67,7 +67,7 @@
             演示账号：admin / 123456
           </p>
           <p class="copyright">
-            © 2024 在线轮椅租赁系统. All rights reserved.
+            © 2025 在线轮椅租赁系统. All rights reserved.
           </p>
         </div>
       </div>
@@ -127,10 +127,21 @@ const handleLogin = async () => {
     
     loading.value = true
     
+    console.log('开始登录:', loginForm)
     const response = await authApi.login(loginForm)
+    console.log('登录响应:', response)
     
     if (response.code === 200 && response.data) {
-      const { token, user } = response.data
+      // 后端返回的数据结构是 { token, user_info: {id, username, role} }
+      const { token, user_info } = response.data
+      
+      // 构造用户对象
+      const user = {
+        id: user_info.id,
+        username: user_info.username,
+        role: user_info.role,
+        created_at: new Date().toISOString()
+      }
       
       // 保存登录状态
       authStore.login(token, user)
@@ -144,13 +155,15 @@ const handleLogin = async () => {
       
       ElMessage.success('登录成功')
       
-      // 跳转到仪表板
-      router.push('/dashboard')
+      // 强制跳转到仪表板
+      await router.push('/dashboard')
+      console.log('跳转到仪表板完成')
     } else {
+      console.error('登录失败:', response)
       ElMessage.error(response.message || '登录失败')
     }
   } catch (error: any) {
-    console.error('登录失败:', error)
+    console.error('登录异常:', error)
     ElMessage.error(error.response?.data?.message || '登录失败，请稍后重试')
   } finally {
     loading.value = false

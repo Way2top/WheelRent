@@ -25,7 +25,12 @@ def admin_required(f):
     @jwt_required()
     def decorated_function(*args, **kwargs):
         current_user_id = get_jwt_identity()
-        user = AdminUser.get_by_id(current_user_id)
+        # JWT identity是字符串，需要转换为整数
+        try:
+            user_id = int(current_user_id)
+            user = AdminUser.get_by_id(user_id)
+        except (ValueError, TypeError):
+            return error_response('无效的用户令牌', 401)
         
         if not user or not user.is_admin():
             return error_response('需要管理员权限', 403)
@@ -39,7 +44,12 @@ def operator_required(f):
     @jwt_required()
     def decorated_function(*args, **kwargs):
         current_user_id = get_jwt_identity()
-        user = AdminUser.get_by_id(current_user_id)
+        # JWT identity是字符串，需要转换为整数
+        try:
+            user_id = int(current_user_id)
+            user = AdminUser.get_by_id(user_id)
+        except (ValueError, TypeError):
+            return error_response('无效的用户令牌', 401)
         
         if not user or not (user.is_admin() or user.is_operator()):
             return error_response('需要操作员权限', 403)
@@ -69,8 +79,8 @@ def admin_login():
             # 记录登录失败日志
             return error_response(message, 401)
         
-        # 生成JWT令牌
-        access_token = create_access_token(identity=user.id)
+        # 生成JWT令牌（identity必须是字符串）
+        access_token = create_access_token(identity=str(user.id))
         
         # 记录登录成功日志
         OperationLog.log_operation(user.id, OperationLog.TYPE_LOGIN)
@@ -151,6 +161,12 @@ def save_wheelchair():
         data = request.get_json()
         current_user_id = get_jwt_identity()
         
+        # 转换用户ID
+        try:
+            user_id = int(current_user_id)
+        except (ValueError, TypeError):
+            return error_response('无效的用户令牌', 401)
+        
         # 验证必需字段
         required_fields = ['name', 'price']
         missing_fields = validate_required_fields(data, required_fields)
@@ -205,7 +221,7 @@ def save_wheelchair():
         db.session.commit()
         
         # 记录操作日志
-        OperationLog.log_operation(current_user_id, operation_type, wheelchair.id)
+        OperationLog.log_operation(user_id, operation_type, wheelchair.id)
         
         return success_response({
             'message': message,
@@ -227,14 +243,45 @@ def operate_wheelchair():
         data = request.get_json()
         current_user_id = get_jwt_identity()
         
-        # 验证必需字段
-        required_fields = ['id', 'operate_type']
-        missing_fields = validate_required_fields(data, required_fields)
-        if missing_fields:
-            return error_response(f'缺少必需字段: {", ".join(missing_fields)}', 400)
+        # 支持不同的操作类型
+        action = data.get('action')
+        operate_type = data.get('operate_type')
         
-        wheelchair_id = data['id']
-        operate_type = data['operate_type']
+        # 兼容新旧API格式
+        if action:
+            operate_type = action
+        
+        # 处理批量状态更新
+        if operate_type == 'batch_status':
+            ids = data.get('ids', [])
+            status = data.get('status')
+            
+            if not ids or not status:
+                return error_response('批量操作需要提供ids和status', 400)
+            
+            from app import db
+            updated_count = 0
+            
+            for wheelchair_id in ids:
+                wheelchair = Wheelchair.get_by_id(wheelchair_id)
+                if wheelchair:
+                    wheelchair.status = status
+                    updated_count += 1
+            
+            db.session.commit()
+            
+            # 记录操作日志
+            OperationLog.log_operation(current_user_id, OperationLog.TYPE_UPDATE_WHEELCHAIR)
+            
+            return success_response({
+                'message': f'成功更新 {updated_count} 个轮椅状态',
+                'updated_count': updated_count
+            })
+        
+        # 单个轮椅操作
+        wheelchair_id = data.get('id')
+        if not wheelchair_id or not operate_type:
+            return error_response('缺少必需字段: id 和 operate_type/action', 400)
         
         # 获取轮椅
         wheelchair = Wheelchair.get_by_id(wheelchair_id, include_deleted=True)

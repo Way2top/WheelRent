@@ -104,34 +104,34 @@ def create_sample_orders():
     """创建示例订单"""
     orders = [
         {
-            "order_no": "WR20240115001",
+            "order_no": "WR20250915001",
             "user_name": "张三",
             "user_phone": "13800138001",
             "user_address": "北京市朝阳区某某街道123号",
             "wheelchair_id": 1,
             "deposit": 200.0,
             "status": "使用中",
-            "create_time": datetime(2024, 1, 15, 10, 30)
+            "create_time": datetime(2025, 9, 15, 10, 30)
         },
         {
-            "order_no": "WR20240114002",
+            "order_no": "WR20250914002",
             "user_name": "李四",
             "user_phone": "13800138002",
             "user_address": "上海市浦东新区某某路456号",
             "wheelchair_id": 2,
             "deposit": 80.0,
             "status": "已归还",
-            "create_time": datetime(2024, 1, 14, 14, 20)
+            "create_time": datetime(2025, 9, 14, 14, 20)
         },
         {
-            "order_no": "WR20240113003",
+            "order_no": "WR20250913003",
             "user_name": "王五",
             "user_phone": "13800138003",
             "user_address": "广州市天河区某某大道789号",
             "wheelchair_id": 3,
             "deposit": 120.0,
             "status": "待配送",
-            "create_time": datetime(2024, 1, 13, 16, 45)
+            "create_time": datetime(2025, 9, 13, 16, 45)
         }
     ]
     

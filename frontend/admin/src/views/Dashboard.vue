@@ -230,31 +230,31 @@ const dashboardData = ref<DashboardStats>({
 // 最近活动数据
 const recentActivities = ref([
   {
-    time: '2024-01-15 14:30',
+    time: '2025-09-15 14:30',
     type: 'primary',
     title: '新订单创建',
-    description: '用户张三创建了轮椅租赁订单 #WR20240115001'
+    description: '用户张三创建了轮椅租赁订单 #WR20250915001'
   },
   {
-    time: '2024-01-15 13:45',
+    time: '2025-09-15 13:45',
     type: 'success',
     title: '订单完成',
-    description: '订单 #WR20240114005 已完成归还，轮椅状态已更新'
+    description: '订单 #WR20250914005 已完成归还，轮椅状态已更新'
   },
   {
-    time: '2024-01-15 12:20',
+    time: '2025-09-15 12:20',
     type: 'warning',
     title: '库存预警',
     description: '标准轮椅库存不足，当前剩余 3 台'
   },
   {
-    time: '2024-01-15 11:15',
+    time: '2025-09-15 11:15',
     type: 'info',
     title: '新用户注册',
     description: '新用户李四完成注册，用户总数达到 156 人'
   },
   {
-    time: '2024-01-15 10:30',
+    time: '2025-09-15 10:30',
     type: 'success',
     title: '轮椅维护完成',
     description: '电动轮椅 #EW001 维护完成，已重新上架'

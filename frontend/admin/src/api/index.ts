@@ -18,7 +18,7 @@ import type {
 
 // 创建axios实例
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: 'http://localhost:5001/api',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json'
@@ -111,7 +111,7 @@ export const dashboardApi = {
 export const wheelchairApi = {
   // 获取轮椅列表
   getList: (params: SearchParams): Promise<ApiResponse<PaginatedResponse<Wheelchair>>> => {
-    return api.get('/admin/wheelchairs', { params })
+    return api.get('/admin/inventory/list', { params })
   },
   
   // 获取轮椅详情
@@ -121,22 +121,22 @@ export const wheelchairApi = {
   
   // 创建轮椅
   create: (data: WheelchairRequest): Promise<ApiResponse<Wheelchair>> => {
-    return api.post('/admin/wheelchairs', data)
+    return api.post('/admin/inventory/save', data)
   },
   
   // 更新轮椅
   update: (id: number, data: WheelchairRequest): Promise<ApiResponse<Wheelchair>> => {
-    return api.put(`/admin/wheelchairs/${id}`, data)
+    return api.post('/admin/inventory/save', { ...data, id })
   },
   
   // 删除轮椅
   delete: (id: number): Promise<ApiResponse> => {
-    return api.delete(`/admin/wheelchairs/${id}`)
+    return api.post('/admin/inventory/operate', { action: 'delete', id })
   },
   
   // 批量更新状态
   batchUpdateStatus: (ids: number[], status: string): Promise<ApiResponse> => {
-    return api.post('/admin/wheelchairs/batch-status', { ids, status })
+    return api.post('/admin/inventory/operate', { action: 'batch_status', ids, status })
   }
 }
 

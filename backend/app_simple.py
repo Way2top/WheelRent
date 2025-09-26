@@ -19,7 +19,7 @@ from sqlalchemy import or_
 app = Flask(__name__)
 
 # 应用配置
-app.config['SECRET_KEY'] = 'wheelchair-rental-system-secret-key-2024'
+app.config['SECRET_KEY'] = 'wheelchair-rental-system-secret-key-2025'
 app.config['JWT_SECRET_KEY'] = 'jwt-secret-string-wheelchair-rental'
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
 
@@ -31,7 +31,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # 初始化扩展
 db = SQLAlchemy(app)
 jwt = JWTManager(app)
-CORS(app, origins=['http://localhost:3000', 'http://localhost:5173', 'http://localhost:8080'])
+CORS(app, origins=['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://localhost:5176', 'http://localhost:8080'])
 
 # 数据模型定义
 class Wheelchair(db.Model):
@@ -393,8 +393,11 @@ def admin_login():
         
         return success_response({
             'token': access_token,
-            'role': user.role,
-            'username': user.username
+            'user_info': {
+                'id': user.id,
+                'username': user.username,
+                'role': user.role
+            }
         })
         
     except Exception as e:
@@ -433,6 +436,145 @@ def get_inventory_list():
         
     except Exception as e:
         return error_response(f'获取库存列表失败: {str(e)}', 500)
+
+@app.route('/api/admin/inventory/save', methods=['POST'])
+@admin_required
+def save_wheelchair():
+    """新增或修改轮椅"""
+    try:
+        data = request.get_json()
+        
+        # 验证必需字段
+        required_fields = ['name', 'price']
+        for field in required_fields:
+            if field not in data or not data[field]:
+                return error_response(f'缺少必需字段: {field}', 400)
+        
+        wheelchair_id = data.get('id')
+        name = data['name'].strip()
+        price = float(data['price'])
+        description = data.get('description', '').strip()
+        stock = int(data.get('stock', 1))
+        manufacturer = data.get('manufacturer', '').strip()
+        
+        # 数据验证
+        if not name:
+            return error_response('轮椅名称不能为空', 400)
+        if price <= 0:
+            return error_response('价格必须大于0', 400)
+        if stock < 0:
+            return error_response('库存不能为负数', 400)
+        
+        if wheelchair_id:
+            # 修改轮椅
+            wheelchair = Wheelchair.query.get(wheelchair_id)
+            if not wheelchair:
+                return error_response('轮椅不存在', 404)
+            
+            wheelchair.name = name
+            wheelchair.price = price
+            wheelchair.description = description
+            wheelchair.stock = stock
+            wheelchair.manufacturer = manufacturer
+            
+            message = '轮椅信息更新成功'
+        else:
+            # 新增轮椅
+            wheelchair = Wheelchair(
+                name=name,
+                price=price,
+                description=description,
+                stock=stock,
+                manufacturer=manufacturer
+            )
+            db.session.add(wheelchair)
+            
+            message = '轮椅添加成功'
+        
+        db.session.commit()
+        
+        return success_response({
+            'message': message,
+            'wheelchair': wheelchair.to_dict()
+        })
+        
+    except ValueError as e:
+        return error_response(f'数据格式错误: {str(e)}', 400)
+    except Exception as e:
+        db.session.rollback()
+        return error_response(f'保存轮椅失败: {str(e)}', 500)
+
+@app.route('/api/admin/inventory/operate', methods=['POST'])
+@admin_required
+def operate_wheelchair():
+    """操作轮椅（删除/下架/上架/批量状态更新）"""
+    try:
+        data = request.get_json()
+        
+        # 支持不同的操作类型
+        action = data.get('action')
+        operate_type = data.get('operate_type')
+        
+        # 兼容新旧API格式
+        if action:
+            operate_type = action
+        
+        # 处理批量状态更新
+        if operate_type == 'batch_status':
+            ids = data.get('ids', [])
+            status = data.get('status')
+            
+            if not ids or not status:
+                return error_response('批量操作需要提供ids和status', 400)
+            
+            updated_count = 0
+            
+            for wheelchair_id in ids:
+                wheelchair = Wheelchair.query.get(wheelchair_id)
+                if wheelchair:
+                    wheelchair.status = status
+                    updated_count += 1
+            
+            db.session.commit()
+            
+            return success_response({
+                'message': f'成功更新 {updated_count} 个轮椅状态',
+                'updated_count': updated_count
+            })
+        
+        # 单个轮椅操作
+        wheelchair_id = data.get('id')
+        if not wheelchair_id or not operate_type:
+            return error_response('缺少必需字段: id 和 operate_type/action', 400)
+        
+        # 获取轮椅
+        wheelchair = Wheelchair.query.get(wheelchair_id)
+        if not wheelchair:
+            return error_response('轮椅不存在', 404)
+        
+        # 执行操作
+        if operate_type == 'delete':
+            wheelchair.is_deleted = True
+            message = '轮椅删除成功'
+        elif operate_type == 'offline':
+            wheelchair.is_offline = True
+            message = '轮椅下架成功'
+        elif operate_type == 'online':
+            wheelchair.is_offline = False
+            message = '轮椅上架成功'
+        else:
+            return error_response('无效的操作类型', 400)
+        
+        db.session.commit()
+        
+        return success_response({
+            'message': message,
+            'wheelchair': wheelchair.to_dict()
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return error_response(f'操作失败: {str(e)}', 500)
 
 @app.route('/api/admin/order/list', methods=['GET'])
 @admin_required

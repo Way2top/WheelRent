@@ -264,28 +264,28 @@ const businessSettings = reactive({
 // 操作日志
 const operationLogs = ref([
   {
-    time: '2024-01-15 14:30',
+    time: '2025-09-15 14:30',
     type: 'primary',
     title: '系统设置更新',
     description: '更新了客服电话和服务时间',
     user: 'admin'
   },
   {
-    time: '2024-01-15 13:45',
+    time: '2025-09-15 13:45',
     type: 'success',
     title: '轮椅信息更新',
     description: '更新了标准轮椅 SW-001 的库存信息',
     user: 'admin'
   },
   {
-    time: '2024-01-15 12:20',
+    time: '2025-09-15 12:20',
     type: 'warning',
     title: '订单状态变更',
-    description: '订单 #WR20240115001 状态更新为已配送',
+    description: '订单 #WR20250915001 状态更新为已配送',
     user: 'admin'
   },
   {
-    time: '2024-01-15 11:15',
+    time: '2025-09-15 11:15',
     type: 'info',
     title: '用户数据导出',
     description: '导出了用户订单数据报表',
