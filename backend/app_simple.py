@@ -345,7 +345,8 @@ def submit_order():
                 user_phone=temp_order.user_phone,
                 user_address=temp_order.user_address,
                 wheelchair_id=temp_order.wheelchair_id,
-                deposit=wheelchair.price
+                deposit=wheelchair.price,
+                create_time=datetime.utcnow()  # 确保下单时间为实时创建时间（UTC）
             )
             
             wheelchair.reduce_stock(1)

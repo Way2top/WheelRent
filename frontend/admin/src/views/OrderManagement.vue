@@ -33,9 +33,8 @@
             clearable
           >
             <el-option label="待配送" value="待配送" />
-            <el-option label="已配送" value="已配送" />
-            <el-option label="使用中" value="使用中" />
-            <el-option label="已归还" value="已归还" />
+            <el-option label="配送中" value="配送中" />
+            <el-option label="已完成" value="已完成" />
             <el-option label="已取消" value="已取消" />
           </el-select>
           
@@ -208,9 +207,8 @@
         <el-form-item label="新状态" prop="status">
           <el-select v-model="statusForm.status" style="width: 100%;">
             <el-option label="待配送" value="待配送" />
-            <el-option label="已配送" value="已配送" />
-            <el-option label="使用中" value="使用中" />
-            <el-option label="已归还" value="已归还" />
+            <el-option label="配送中" value="配送中" />
+            <el-option label="已完成" value="已完成" />
             <el-option label="已取消" value="已取消" />
           </el-select>
         </el-form-item>
@@ -288,9 +286,8 @@ const statusRules: FormRules = {
 const getStatusType = (status: string) => {
   const typeMap: Record<string, string> = {
     '待配送': 'warning',
-    '已配送': 'primary',
-    '使用中': 'success',
-    '已归还': 'info',
+    '配送中': 'primary',
+    '已完成': 'info',
     '已取消': 'danger'
   }
   return typeMap[status] || 'info'
@@ -298,18 +295,21 @@ const getStatusType = (status: string) => {
 
 // 格式化时间
 const formatTime = (timeStr: string) => {
-  const date = new Date(timeStr)
-  return date.toLocaleString('zh-CN')
+  if (!timeStr) return ''
+  // 兼容后端返回的 "YYYY-MM-DD HH:MM:SS" 与 ISO 格式
+  const normalized = timeStr.includes('T') ? timeStr : timeStr.replace(' ', 'T')
+  const date = new Date(normalized)
+  return isNaN(date.getTime()) ? timeStr : date.toLocaleString('zh-CN')
 }
 
 // 判断是否可以更新状态
 const canUpdateStatus = (status: string) => {
-  return !['已归还', '已取消'].includes(status)
+  return !['已完成', '已取消'].includes(status)
 }
 
 // 判断是否可以取消
 const canCancel = (status: string) => {
-  return ['待配送', '已配送'].includes(status)
+  return ['待配送', '配送中'].includes(status)
 }
 
 // 处理日期范围变化
@@ -327,67 +327,11 @@ const handleDateChange = (dates: [string, string] | null) => {
 const getOrderList = async () => {
   try {
     loading.value = true
-    
-    // 模拟API调用
-    // const response = await orderApi.getList(searchParams)
-    
-    // 模拟数据
-    const mockData = {
-      items: [
-        {
-          id: 1,
-          order_no: 'WR20250915001',
-          user_name: '张三',
-          user_phone: '13800138001',
-          user_address: '北京市朝阳区某某街道123号',
-          wheelchair_id: 1,
-          wheelchair_name: '标准轮椅 SW-001',
-          deposit: 50,
-          status: '使用中',
-          create_time: '2025-09-15T10:30:00Z',
-delivery_time: '2025-09-15T14:30:00Z',
-          return_time: null,
-          notes: '用户要求下午配送'
-        },
-        {
-          id: 2,
-          order_no: 'WR20250915002',
-          user_name: '李四',
-          user_phone: '13800138002',
-          user_address: '上海市浦东新区某某路456号',
-          wheelchair_id: 2,
-          wheelchair_name: '电动轮椅 EW-002',
-          deposit: 120,
-          status: '待配送',
-          create_time: '2025-09-15T11:00:00Z',
-          delivery_time: null,
-          return_time: null,
-          notes: null
-        },
-        {
-          id: 3,
-          order_no: 'WR20250914003',
-          user_name: '王五',
-          user_phone: '13800138003',
-          user_address: '广州市天河区某某大道789号',
-          wheelchair_id: 1,
-          wheelchair_name: '标准轮椅 SW-001',
-          deposit: 50,
-          status: '已归还',
-          create_time: '2025-09-14T09:00:00Z',
-delivery_time: '2025-09-14T13:00:00Z',
-return_time: '2025-09-15T09:00:00Z',
-          notes: '按时归还，轮椅状态良好'
-        }
-      ],
-      total: 3,
-      page: 1,
-      limit: 20,
-      totalPages: 1
-    }
-    
-    tableData.value = mockData.items
-    total.value = mockData.total
+    // 调用真实后端接口
+    const response = await orderApi.getList(searchParams)
+    const data = response.data
+    tableData.value = data?.items || []
+    total.value = data?.total || 0
   } catch (error) {
     console.error('获取订单列表失败:', error)
     ElMessage.error('获取数据失败，请稍后重试')
@@ -482,10 +426,8 @@ const handleCancel = async (row: Order) => {
         type: 'warning'
       }
     )
-    
-    // 模拟API调用
-    // await orderApi.updateStatus(row.id, { status: '已取消', notes: '管理员取消' })
-    
+    // 调用后端取消接口（更新状态为已取消）
+    await orderApi.updateStatus(row.id, { status: '已取消' })
     ElMessage.success('订单已取消')
     getOrderList()
   } catch (error: any) {
@@ -505,10 +447,8 @@ const handleStatusSubmit = async () => {
     if (!valid) return
     
     statusLoading.value = true
-    
-    // 模拟API调用
-    // await orderApi.updateStatus(currentOrderId.value, statusForm)
-    
+    // 调用后端接口更新状态
+    await orderApi.updateStatus(currentOrderId.value, statusForm)
     ElMessage.success('状态更新成功')
     statusDialogVisible.value = false
     getOrderList()
