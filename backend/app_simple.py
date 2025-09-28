@@ -368,6 +368,30 @@ def submit_order():
     except Exception as e:
         return error_response(f'提交订单失败: {str(e)}', 500)
 
+
+@app.route('/api/order/detail/<string:order_no>', methods=['GET'])
+def get_order_detail(order_no):
+    """根据订单号获取订单详情"""
+    try:
+        order = FormalOrder.query.filter_by(order_no=order_no).first()
+        
+        if not order:
+            return error_response('订单不存在', 404)
+        
+        # 获取轮椅信息
+        wheelchair = Wheelchair.query.get(order.wheelchair_id)
+        order_dict = order.to_dict()
+        
+        if wheelchair:
+            order_dict['wheelchair_name'] = wheelchair.name
+        else:
+            order_dict['wheelchair_name'] = '未知轮椅'
+        
+        return success_response(order_dict)
+        
+    except Exception as e:
+        return error_response(f'获取订单详情失败: {str(e)}', 500)
+
 # 管理端API路由
 @app.route('/api/admin/login', methods=['POST'])
 def admin_login():

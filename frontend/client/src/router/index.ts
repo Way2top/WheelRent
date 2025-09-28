@@ -32,6 +32,11 @@ const router = createRouter({
       path: '/order/success',
       name: 'OrderSuccess',
       component: () => import('@/views/OrderSuccess.vue')
+    },
+    {
+      path: '/test-order',
+      name: 'TestOrder',
+      component: () => import('@/views/TestOrder.vue')
     }
   ]
 })

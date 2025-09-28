@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试订单API</title>
+</head>
+<body>
+    <h1>测试订单API</h1>
+    <button onclick="testOrderAPI()">测试获取订单详情</button>
+    <div id="result"></div>
+
+    <script>
+        async function testOrderAPI() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '正在请求...';
+            
+            try {
+                const response = await fetch('http://localhost:5001/api/order/detail/WR202509280846154457DB');
+                const data = await response.json();
+                
+                resultDiv.innerHTML = `
+                    <h3>API响应:</h3>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+                
+                console.log('API响应:', data);
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <h3>错误:</h3>
+                    <p style="color: red;">${error.message}</p>
+                `;
+                console.error('API调用失败:', error);
+            }
+        }
+    </script>
+</body>
+</html>
