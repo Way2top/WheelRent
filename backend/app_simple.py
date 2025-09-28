@@ -77,7 +77,8 @@ class FormalOrder(db.Model):
     wheelchair_id = db.Column(db.Integer, db.ForeignKey('wheelchair.id'), nullable=False)
     deposit = db.Column(db.Float, nullable=False)
     status = db.Column(db.String(20), nullable=False, default='待配送')
-    create_time = db.Column(db.DateTime, default=datetime.utcnow)
+    # 使用本地时间记录创建时间，避免显示为UTC造成管理员端时间不一致
+    create_time = db.Column(db.DateTime, default=datetime.now)
     
     wheelchair = db.relationship('Wheelchair', backref='formal_orders')
     
@@ -111,7 +112,8 @@ class TempOrder(db.Model):
     user_phone = db.Column(db.String(20))
     user_address = db.Column(db.Text)
     wheelchair_id = db.Column(db.Integer)
-    create_time = db.Column(db.DateTime, default=datetime.utcnow)
+    # 使用本地时间记录预订单创建时间
+    create_time = db.Column(db.DateTime, default=datetime.now)
     
     def __init__(self, user_name, user_phone, user_address, wheelchair_id):
         self.id = str(uuid.uuid4())
@@ -119,7 +121,8 @@ class TempOrder(db.Model):
         self.user_phone = user_phone
         self.user_address = user_address
         self.wheelchair_id = wheelchair_id
-        self.create_time = datetime.utcnow()
+        # 预订单创建时间使用本地时间
+        self.create_time = datetime.now()
     
     def get_expire_time(self):
         return self.create_time + timedelta(minutes=30)
@@ -346,7 +349,8 @@ def submit_order():
                 user_address=temp_order.user_address,
                 wheelchair_id=temp_order.wheelchair_id,
                 deposit=wheelchair.price,
-                create_time=datetime.utcnow()  # 确保下单时间为实时创建时间（UTC）
+                # 使用本地时间记录下单时间，确保管理员端显示与实际一致
+                create_time=datetime.now()
             )
             
             wheelchair.reduce_stock(1)
