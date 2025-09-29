@@ -16,9 +16,9 @@ import type {
   SystemSettings
 } from '@/types/api'
 
-// 创建axios实例
+// 创建axios实例（优先使用环境变量，默认走相对路径以使用Vite代理）
 const api = axios.create({
-  baseURL: 'http://localhost:5001/api',
+  baseURL: (import.meta as any).env?.VITE_API_BASE_URL || '/api',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json'
@@ -144,17 +144,36 @@ export const wheelchairApi = {
 export const orderApi = {
   // 获取订单列表
   getList: (params: SearchParams): Promise<ApiResponse<PaginatedResponse<Order>>> => {
-    return api.get('/admin/orders', { params })
+    // 适配后端 /api/admin/order/list 返回结构为 { list, total, page, limit, pages }
+    return api.get('/admin/order/list', { params }).then((res: any) => {
+      const data = res?.data || {}
+      return {
+        code: res.code,
+        message: res.message,
+        data: {
+          items: data.list || [],
+          total: data.total || 0,
+          page: data.page || (params.page ?? 1),
+          limit: data.limit || (params.limit ?? 10),
+          totalPages: data.pages || Math.ceil((data.total || 0) / (data.limit || (params.limit ?? 10)))
+        }
+      }
+    })
   },
   
   // 获取订单详情
   getDetail: (id: number): Promise<ApiResponse<Order>> => {
+    // 简化版后端暂无管理员订单详情接口，保留占位以备后续扩展
     return api.get(`/admin/orders/${id}`)
   },
   
   // 更新订单状态
   updateStatus: (id: number, data: OrderStatusUpdateRequest): Promise<ApiResponse<Order>> => {
-    return api.put(`/admin/orders/${id}/status`, data)
+    // 适配后端 /api/admin/order/update/status 接口，参数为 { order_id, new_status }
+    return api.post('/admin/order/update/status', {
+      order_id: id,
+      new_status: data.status
+    })
   },
   
   // 删除订单
