@@ -31,6 +31,9 @@
         </div>
       </div>
       
+      <!-- 导航栏 -->
+      <NavBar />
+      
       <div class="app-main">
         <router-view />
       </div>
@@ -45,6 +48,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useFontSizeStore } from '@/stores/fontSize'
+import NavBar from '@/components/NavBar.vue'
 
 const fontSizeStore = useFontSizeStore()
 

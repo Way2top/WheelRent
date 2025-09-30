@@ -163,6 +163,43 @@ class AdminUser(db.Model):
             'is_deleted': self.is_deleted
         }
 
+class ClientUser(db.Model):
+    """客户端用户模型"""
+    __tablename__ = 'client_user'
+    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    username = db.Column(db.String(50), unique=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)
+    phone = db.Column(db.String(20))
+    address = db.Column(db.Text)
+    create_time = db.Column(db.DateTime, default=datetime.now)
+    last_login = db.Column(db.DateTime)
+    
+    def set_password(self, password):
+        if isinstance(password, str):
+            password = password.encode('utf-8')
+        salt = bcrypt.gensalt()
+        self.password_hash = bcrypt.hashpw(password, salt).decode('utf-8')
+    
+    def check_password(self, password):
+        if isinstance(password, str):
+            password = password.encode('utf-8')
+        if isinstance(self.password_hash, str):
+            password_hash = self.password_hash.encode('utf-8')
+        else:
+            password_hash = self.password_hash
+        return bcrypt.checkpw(password, password_hash)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'username': self.username,
+            'phone': self.phone,
+            'address': self.address,
+            'create_time': self.create_time.strftime('%Y-%m-%d %H:%M:%S') if self.create_time else None,
+            'last_login': self.last_login.strftime('%Y-%m-%d %H:%M:%S') if self.last_login else None
+        }
+
 # 工具函数
 def success_response(data=None, message='操作成功'):
     return jsonify({
@@ -195,10 +232,106 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+# 客户端用户API路由
+@app.route('/api/user/register', methods=['POST'])
+def client_register():
+    """客户端用户注册"""
+    try:
+        data = request.get_json()
+        
+        # 验证必需字段
+        if 'username' not in data or 'password' not in data:
+            return error_response('缺少用户名或密码', 400)
+        
+        username = data['username'].strip()
+        password = data['password']
+        phone = data.get('phone', '').strip()
+        address = data.get('address', '').strip()
+        
+        # 验证用户名是否已存在
+        if ClientUser.query.filter_by(username=username).first():
+            return error_response('用户名已存在', 400)
+        
+        # 创建新用户
+        user = ClientUser(
+            username=username,
+            phone=phone,
+            address=address
+        )
+        user.set_password(password)
+        
+        db.session.add(user)
+        db.session.commit()
+        
+        # 创建访问令牌
+        access_token = create_access_token(identity=f"client_{user.id}")
+        
+        return success_response({
+            'token': access_token,
+            'user_info': user.to_dict()
+        }, '注册成功')
+        
+    except Exception as e:
+        db.session.rollback()
+        return error_response(f'注册失败: {str(e)}', 500)
+
+@app.route('/api/user/login', methods=['POST'])
+def client_login():
+    """客户端用户登录"""
+    try:
+        data = request.get_json()
+        
+        if 'username' not in data or 'password' not in data:
+            return error_response('缺少用户名或密码', 400)
+        
+        username = data['username']
+        password = data['password']
+        
+        user = ClientUser.query.filter_by(username=username).first()
+        
+        if not user or not user.check_password(password):
+            return error_response('用户名或密码错误', 401)
+        
+        # 更新最后登录时间
+        user.last_login = datetime.now()
+        db.session.commit()
+        
+        access_token = create_access_token(identity=f"client_{user.id}")
+        
+        return success_response({
+            'token': access_token,
+            'user_info': user.to_dict()
+        })
+        
+    except Exception as e:
+        return error_response(f'登录失败: {str(e)}', 500)
+
+@app.route('/api/user/info', methods=['GET'])
+@jwt_required()
+def get_client_user_info():
+    """获取客户端用户信息"""
+    try:
+        identity = get_jwt_identity()
+        
+        # 验证是否为客户端用户
+        if not identity.startswith('client_'):
+            return error_response('无效的用户身份', 401)
+        
+        user_id = int(identity.split('_')[1])
+        user = ClientUser.query.get(user_id)
+        
+        if not user:
+            return error_response('用户不存在', 404)
+        
+        return success_response(user.to_dict())
+        
+    except Exception as e:
+        return error_response(f'获取用户信息失败: {str(e)}', 500)
+
 # 客户端API路由
 @app.route('/api/wheelchair/search', methods=['GET'])
 def search_wheelchairs():
-    """轮椅搜索接口"""
+    """搜索轮椅"""
     try:
         keyword = request.args.get('keyword', '').strip()
         sort_type = request.args.get('sort_type', '')
