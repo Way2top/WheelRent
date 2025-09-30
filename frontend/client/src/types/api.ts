@@ -5,6 +5,31 @@ export interface ApiResponse<T = any> {
   data?: T
 }
 
+// 用户相关类型
+export interface User {
+  id: number
+  username: string
+  phone?: string
+  address?: string
+  create_time?: string
+  last_login?: string
+}
+
+export interface LoginParams {
+  username: string
+  password: string
+}
+
+export interface RegisterParams extends LoginParams {
+  phone?: string
+  address?: string
+}
+
+export interface LoginResponse {
+  token: string
+  user_info: User
+}
+
 // 轮椅类型
 export interface Wheelchair {
   id: number

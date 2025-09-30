@@ -140,10 +140,28 @@ const goBack = () => {
   router.push('/home')
 }
 
+// 引入用户状态
+import { useUserStore } from '@/stores/user'
+const userStore = useUserStore()
+
 // 开始租赁
 const startRental = () => {
   if (!wheelchair.value) return
   
+  // 检查用户是否已登录
+  if (!userStore.isLoggedIn) {
+    // 未登录则跳转到登录页面，并设置重定向
+    router.push({
+      name: 'Login',
+      query: {
+        redirect: `/order/create?wheelchairId=${wheelchair.value.id}`
+      }
+    })
+    ElMessage.info('请先登录后再进行租赁')
+    return
+  }
+  
+  // 已登录则直接进入订单创建页面
   router.push({
     name: 'OrderCreate',
     query: {
