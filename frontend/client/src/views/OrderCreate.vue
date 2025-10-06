@@ -148,7 +148,8 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import { ArrowLeft } from '@element-plus/icons-vue'
-import { wheelchairApi, orderApi } from '@/api/wheelchair'
+import axios from 'axios'
+import { useUserStore } from '@/stores/user'
 import type { Wheelchair } from '@/types/api'
 
 const route = useRoute()
@@ -204,7 +205,7 @@ const getWheelchairDetail = async () => {
       return
     }
     
-    const response = await wheelchairApi.getDetail(wheelchairId)
+    const response = await api.get(`/wheelchair/detail/${wheelchairId}`)
     
     if (response.code === 200 && response.data) {
       wheelchair.value = response.data
@@ -253,10 +254,32 @@ const submitOrder = async () => {
       }
     )
     
+    // 检查是否有默认地址，如果没有则询问是否保存为默认地址
+    let shouldSaveAsDefault = false;
+    try {
+      const response = await api.get('/user/address/default');
+      if (!response.data) {
+        const saveResult = await ElMessageBox.confirm(
+          '检测到您尚未设置默认收货地址，是否将当前信息保存为默认收货地址？',
+          '保存默认地址',
+          {
+            confirmButtonText: '保存',
+            cancelButtonText: '不保存',
+            type: 'question'
+          }
+        );
+        
+        shouldSaveAsDefault = saveResult !== 'cancel';
+      }
+    } catch (error) {
+      console.error('获取默认地址失败:', error);
+      // 继续执行，不影响订单流程
+    }
+    
     submitting.value = true
     
     // 创建预订单
-    const tempOrderResponse = await orderApi.createTempOrder({
+    const tempOrderResponse = await api.post('/order/create_temp_order', {
       name: orderForm.name,
       phone: orderForm.phone,
       address: orderForm.address,
@@ -264,6 +287,22 @@ const submitOrder = async () => {
     })
     
     if (tempOrderResponse.code === 200 && tempOrderResponse.data) {
+      // 如果用户选择保存为默认地址，则在订单创建成功后保存
+      if (shouldSaveAsDefault) {
+        try {
+          await api.post('/user/address/add', {
+            name: orderForm.name,
+            phone: orderForm.phone,
+            address: orderForm.address,
+            is_default: true
+          });
+          ElMessage.success('已保存为默认收货地址');
+        } catch (error) {
+          console.error('保存默认地址失败:', error);
+          // 保存地址失败不影响订单流程
+        }
+      }
+      
       // 跳转到支付页面
       router.push({
         name: 'Payment',
@@ -285,9 +324,53 @@ const submitOrder = async () => {
   }
 }
 
+// 创建axios实例
+const api = axios.create({
+  baseURL: '/api',
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// 请求拦截器添加token
+api.interceptors.request.use(
+  (config) => {
+    const userStore = useUserStore();
+    const token = userStore.token;
+    
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// 获取默认地址并填充表单
+const loadDefaultAddress = async () => {
+  try {
+    const response = await api.get('/user/address/default');
+    const defaultAddress = response.data;
+    if (defaultAddress) {
+      orderForm.name = defaultAddress.name;
+      orderForm.phone = defaultAddress.phone;
+      orderForm.address = defaultAddress.address;
+    }
+  } catch (error) {
+    console.error('获取默认地址失败:', error);
+    // 静默失败，不影响用户继续操作
+  }
+}
+
 // 组件挂载时获取数据
-onMounted(() => {
-  getWheelchairDetail()
+onMounted(async () => {
+  getWheelchairDetail();
+  // 尝试加载默认地址
+  await loadDefaultAddress();
 })
 </script>
 

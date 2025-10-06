@@ -175,6 +175,9 @@ class ClientUser(db.Model):
     create_time = db.Column(db.DateTime, default=datetime.now)
     last_login = db.Column(db.DateTime)
     
+    # 关系定义
+    user_infos = db.relationship('UserInfo', backref='user', lazy=True)
+    
     def set_password(self, password):
         if isinstance(password, str):
             password = password.encode('utf-8')
@@ -198,6 +201,31 @@ class ClientUser(db.Model):
             'address': self.address,
             'create_time': self.create_time.strftime('%Y-%m-%d %H:%M:%S') if self.create_time else None,
             'last_login': self.last_login.strftime('%Y-%m-%d %H:%M:%S') if self.last_login else None
+        }
+
+class UserInfo(db.Model):
+    """用户收货信息模型"""
+    __tablename__ = 'user_info'
+    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('client_user.id'), nullable=False)
+    name = db.Column(db.String(50), nullable=False)
+    phone = db.Column(db.String(20), nullable=False)
+    address = db.Column(db.Text, nullable=False)
+    is_default = db.Column(db.Boolean, default=False)
+    create_time = db.Column(db.DateTime, default=datetime.now)
+    update_time = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'name': self.name,
+            'phone': self.phone,
+            'address': self.address,
+            'is_default': self.is_default,
+            'create_time': self.create_time.strftime('%Y-%m-%d %H:%M:%S') if self.create_time else None,
+            'update_time': self.update_time.strftime('%Y-%m-%d %H:%M:%S') if self.update_time else None
         }
 
 # 工具函数
@@ -327,6 +355,231 @@ def get_client_user_info():
         
     except Exception as e:
         return error_response(f'获取用户信息失败: {str(e)}', 500)
+
+@app.route('/api/user/address/list', methods=['GET'])
+@jwt_required()
+def get_user_addresses():
+    """获取用户所有收货地址"""
+    try:
+        identity = get_jwt_identity()
+        
+        # 验证是否为客户端用户
+        if not identity.startswith('client_'):
+            return error_response('无效的用户身份', 401)
+        
+        user_id = int(identity.split('_')[1])
+        user = ClientUser.query.get(user_id)
+        
+        if not user:
+            return error_response('用户不存在', 404)
+        
+        # 获取所有收货地址
+        addresses = UserInfo.query.filter_by(user_id=user_id).order_by(UserInfo.is_default.desc(), UserInfo.update_time.desc()).all()
+        address_list = [address.to_dict() for address in addresses]
+        
+        return success_response(address_list)
+        
+    except Exception as e:
+        return error_response(f'获取收货地址失败: {str(e)}', 500)
+
+@app.route('/api/user/address/add', methods=['POST'])
+@jwt_required()
+def add_user_address():
+    """添加新的收货地址"""
+    try:
+        identity = get_jwt_identity()
+        data = request.get_json()
+        
+        # 验证是否为客户端用户
+        if not identity.startswith('client_'):
+            return error_response('无效的用户身份', 401)
+        
+        user_id = int(identity.split('_')[1])
+        user = ClientUser.query.get(user_id)
+        
+        if not user:
+            return error_response('用户不存在', 404)
+        
+        # 验证必需字段
+        required_fields = ['name', 'phone', 'address']
+        for field in required_fields:
+            if field not in data or not data[field]:
+                return error_response(f'缺少必需字段: {field}', 400)
+        
+        name = data['name'].strip()
+        phone = data['phone'].strip()
+        address = data['address'].strip()
+        is_default = data.get('is_default', False)
+        
+        if not validate_phone(phone):
+            return error_response('手机号格式不正确', 400)
+        
+        # 如果设置为默认地址，取消其他地址的默认状态
+        if is_default:
+            UserInfo.query.filter_by(user_id=user_id).update({'is_default': False})
+        
+        # 检查是否是第一次添加地址，如果是则设置为默认
+        elif UserInfo.query.filter_by(user_id=user_id).count() == 0:
+            is_default = True
+        
+        # 创建新的收货地址
+        user_info = UserInfo(
+            user_id=user_id,
+            name=name,
+            phone=phone,
+            address=address,
+            is_default=is_default
+        )
+        
+        db.session.add(user_info)
+        db.session.commit()
+        
+        return success_response(user_info.to_dict(), '添加收货地址成功')
+        
+    except Exception as e:
+        db.session.rollback()
+        return error_response(f'添加收货地址失败: {str(e)}', 500)
+
+@app.route('/api/user/address/update/<int:address_id>', methods=['PUT'])
+@jwt_required()
+def update_user_address(address_id):
+    """更新收货地址"""
+    try:
+        identity = get_jwt_identity()
+        data = request.get_json()
+        
+        # 验证是否为客户端用户
+        if not identity.startswith('client_'):
+            return error_response('无效的用户身份', 401)
+        
+        user_id = int(identity.split('_')[1])
+        
+        # 检查地址是否存在且属于当前用户
+        user_info = UserInfo.query.filter_by(id=address_id, user_id=user_id).first()
+        
+        if not user_info:
+            return error_response('收货地址不存在', 404)
+        
+        # 更新字段
+        if 'name' in data and data['name']:
+            user_info.name = data['name'].strip()
+        
+        if 'phone' in data and data['phone']:
+            phone = data['phone'].strip()
+            if not validate_phone(phone):
+                return error_response('手机号格式不正确', 400)
+            user_info.phone = phone
+        
+        if 'address' in data and data['address']:
+            user_info.address = data['address'].strip()
+        
+        # 如果设置为默认地址，取消其他地址的默认状态
+        if 'is_default' in data and data['is_default']:
+            UserInfo.query.filter_by(user_id=user_id).update({'is_default': False})
+            user_info.is_default = True
+        
+        db.session.commit()
+        
+        return success_response(user_info.to_dict(), '更新收货地址成功')
+        
+    except Exception as e:
+        db.session.rollback()
+        return error_response(f'更新收货地址失败: {str(e)}', 500)
+
+@app.route('/api/user/address/delete/<int:address_id>', methods=['DELETE'])
+@jwt_required()
+def delete_user_address(address_id):
+    """删除收货地址"""
+    try:
+        identity = get_jwt_identity()
+        
+        # 验证是否为客户端用户
+        if not identity.startswith('client_'):
+            return error_response('无效的用户身份', 401)
+        
+        user_id = int(identity.split('_')[1])
+        
+        # 检查地址是否存在且属于当前用户
+        user_info = UserInfo.query.filter_by(id=address_id, user_id=user_id).first()
+        
+        if not user_info:
+            return error_response('收货地址不存在', 404)
+        
+        # 检查是否还有其他地址
+        remaining_count = UserInfo.query.filter_by(user_id=user_id).count() - 1
+        
+        if remaining_count > 0:
+            # 如果删除的是默认地址，将其他地址中的一个设为默认
+            if user_info.is_default:
+                other_address = UserInfo.query.filter(UserInfo.user_id == user_id, UserInfo.id != address_id).first()
+                if other_address:
+                    other_address.is_default = True
+        
+        db.session.delete(user_info)
+        db.session.commit()
+        
+        return success_response({}, '删除收货地址成功')
+        
+    except Exception as e:
+        db.session.rollback()
+        return error_response(f'删除收货地址失败: {str(e)}', 500)
+
+@app.route('/api/user/address/set_default/<int:address_id>', methods=['POST'])
+@jwt_required()
+def set_default_address(address_id):
+    """设置默认收货地址"""
+    try:
+        identity = get_jwt_identity()
+        
+        # 验证是否为客户端用户
+        if not identity.startswith('client_'):
+            return error_response('无效的用户身份', 401)
+        
+        user_id = int(identity.split('_')[1])
+        
+        # 检查地址是否存在且属于当前用户
+        user_info = UserInfo.query.filter_by(id=address_id, user_id=user_id).first()
+        
+        if not user_info:
+            return error_response('收货地址不存在', 404)
+        
+        # 取消所有地址的默认状态
+        UserInfo.query.filter_by(user_id=user_id).update({'is_default': False})
+        
+        # 设置当前地址为默认
+        user_info.is_default = True
+        
+        db.session.commit()
+        
+        return success_response(user_info.to_dict(), '设置默认收货地址成功')
+        
+    except Exception as e:
+        db.session.rollback()
+        return error_response(f'设置默认收货地址失败: {str(e)}', 500)
+
+@app.route('/api/user/address/default', methods=['GET'])
+@jwt_required()
+def get_default_address():
+    """获取默认收货地址"""
+    try:
+        identity = get_jwt_identity()
+        
+        # 验证是否为客户端用户
+        if not identity.startswith('client_'):
+            return error_response('无效的用户身份', 401)
+        
+        user_id = int(identity.split('_')[1])
+        
+        # 获取默认收货地址
+        default_address = UserInfo.query.filter_by(user_id=user_id, is_default=True).first()
+        
+        if not default_address:
+            return success_response(None)
+        
+        return success_response(default_address.to_dict())
+        
+    except Exception as e:
+        return error_response(f'获取默认收货地址失败: {str(e)}', 500)
 
 # 客户端API路由
 @app.route('/api/wheelchair/search', methods=['GET'])

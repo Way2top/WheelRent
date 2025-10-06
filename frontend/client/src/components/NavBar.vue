@@ -13,8 +13,9 @@
             </span>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item @click="logout">退出登录</el-dropdown-item>
-              </el-dropdown-menu>
+              <el-dropdown-item @click="toUserInfo">信息管理</el-dropdown-item>
+              <el-dropdown-item @click="logout">退出登录</el-dropdown-item>
+            </el-dropdown-menu>
             </template>
           </el-dropdown>
         </template>
@@ -39,6 +40,10 @@ const logout = async () => {
   userStore.logout()
   ElMessage.success('已退出登录')
   router.push('/home')
+}
+
+const toUserInfo = () => {
+  router.push('/user-info')
 }
 </script>
 

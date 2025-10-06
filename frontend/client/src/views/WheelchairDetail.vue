@@ -118,8 +118,8 @@ const getWheelchairDetail = async () => {
       return
     }
     
+    // 响应拦截器会直接返回response.data，这里返回的是ApiResponse<Wheelchair>类型
     const response = await wheelchairApi.getDetail(id)
-    
     if (response.code === 200 && response.data) {
       wheelchair.value = response.data
     } else {
