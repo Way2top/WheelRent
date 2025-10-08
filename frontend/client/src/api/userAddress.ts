@@ -93,5 +93,5 @@ export const setDefaultAddress = async (id: number): Promise<UserAddress> => {
  */
 export const getDefaultAddress = async (): Promise<UserAddress | null> => {
   const response = await api.get('/user/address/default');
-  return response.data;
+  return response.data.data;
 };

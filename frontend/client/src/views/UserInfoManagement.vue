@@ -100,35 +100,11 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import axios from 'axios';
 import { useUserStore } from '@/stores/user';
 import { ElMessage } from 'element-plus';
+import { getUserAddresses, addUserAddress, updateUserAddress, deleteUserAddress, setDefaultAddress } from '@/api/userAddress';
 
-// 创建axios实例
-const api = axios.create({
-  baseURL: '/api',
-  timeout: 10000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
 
-// 请求拦截器添加token
-api.interceptors.request.use(
-  (config) => {
-    const userStore = useUserStore();
-    const token = userStore.token;
-    
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
 
 /**
  * 用户地址信息接口
@@ -282,69 +258,9 @@ async function makeDefault(id: number) {
   }
 }
 
-/**
- * 获取用户所有地址
- */
-const getUserAddresses = async (): Promise<UserAddress[]> => {
-  // 响应拦截器会直接返回response.data，这里返回的是ApiResponse<UserAddress[]>类型
-  const response = await api.get('/user/address/list');
-  if (response.code === 200 && response.data) {
-    return response.data;
-  }
-  throw new Error(response.message || '获取地址列表失败');
-};
 
-/**
- * 添加新地址
- */
-const addUserAddress = async (
-  data: Omit<UserAddress, 'id' | 'create_time' | 'update_time'>
-): Promise<UserAddress> => {
-  // 响应拦截器会直接返回response.data，这里返回的是ApiResponse<UserAddress>类型
-  const response = await api.post('/user/address/add', data);
-  if (response.code === 200 && response.data) {
-    return response.data;
-  }
-  throw new Error(response.message || '添加地址失败');
-};
 
-/**
- * 更新地址
- */
-const updateUserAddress = async (
-  id: number,
-  data: Partial<Omit<UserAddress, 'id' | 'create_time' | 'update_time'>
->): Promise<UserAddress> => {
-  // 响应拦截器会直接返回response.data，这里返回的是ApiResponse<UserAddress>类型
-  const response = await api.put(`/user/address/update/${id}`, data);
-  if (response.code === 200 && response.data) {
-    return response.data;
-  }
-  throw new Error(response.message || '更新地址失败');
-};
 
-/**
- * 删除地址
- */
-const deleteUserAddress = async (id: number): Promise<void> => {
-  // 响应拦截器会直接返回response.data，这里返回的是ApiResponse类型
-  const response = await api.delete(`/user/address/delete/${id}`);
-  if (response.code !== 200) {
-    throw new Error(response.message || '删除地址失败');
-  }
-};
-
-/**
- * 设置默认地址
- */
-const setDefaultAddress = async (id: number): Promise<UserAddress> => {
-  // 响应拦截器会直接返回response.data，这里返回的是ApiResponse<UserAddress>类型
-  const response = await api.post(`/user/address/set_default/${id}`);
-  if (response.code === 200 && response.data) {
-    return response.data;
-  }
-  throw new Error(response.message || '设置默认地址失败');
-};
 
 // 组件挂载时加载地址列表
 onMounted(() => {

@@ -148,7 +148,8 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import { ArrowLeft } from '@element-plus/icons-vue'
-import axios from 'axios'
+import { wheelchairApi, orderApi } from '@/api/wheelchair'
+import { getDefaultAddress, addUserAddress } from '@/api/userAddress'
 import { useUserStore } from '@/stores/user'
 import type { Wheelchair } from '@/types/api'
 
@@ -205,7 +206,7 @@ const getWheelchairDetail = async () => {
       return
     }
     
-    const response = await api.get(`/wheelchair/detail/${wheelchairId}`)
+    const response = await wheelchairApi.getDetail(wheelchairId)
     
     if (response.code === 200 && response.data) {
       wheelchair.value = response.data
@@ -257,8 +258,8 @@ const submitOrder = async () => {
     // 检查是否有默认地址，如果没有则询问是否保存为默认地址
     let shouldSaveAsDefault = false;
     try {
-      const response = await api.get('/user/address/default');
-      if (!response.data) {
+      const response = await getDefaultAddress();
+      if (!response) {
         const saveResult = await ElMessageBox.confirm(
           '检测到您尚未设置默认收货地址，是否将当前信息保存为默认收货地址？',
           '保存默认地址',
@@ -279,7 +280,7 @@ const submitOrder = async () => {
     submitting.value = true
     
     // 创建预订单
-    const tempOrderResponse = await api.post('/order/create_temp_order', {
+    const tempOrderResponse = await orderApi.createTempOrder({
       name: orderForm.name,
       phone: orderForm.phone,
       address: orderForm.address,
@@ -290,7 +291,7 @@ const submitOrder = async () => {
       // 如果用户选择保存为默认地址，则在订单创建成功后保存
       if (shouldSaveAsDefault) {
         try {
-          await api.post('/user/address/add', {
+          await addUserAddress({
             name: orderForm.name,
             phone: orderForm.phone,
             address: orderForm.address,
@@ -324,37 +325,12 @@ const submitOrder = async () => {
   }
 }
 
-// 创建axios实例
-const api = axios.create({
-  baseURL: '/api',
-  timeout: 10000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
 
-// 请求拦截器添加token
-api.interceptors.request.use(
-  (config) => {
-    const userStore = useUserStore();
-    const token = userStore.token;
-    
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
 
 // 获取默认地址并填充表单
 const loadDefaultAddress = async () => {
   try {
-    const response = await api.get('/user/address/default');
-    const defaultAddress = response.data;
+    const defaultAddress = await getDefaultAddress();
     if (defaultAddress) {
       orderForm.name = defaultAddress.name;
       orderForm.phone = defaultAddress.phone;
