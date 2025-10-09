@@ -13,8 +13,9 @@
             </span>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item @click="logout">退出登录</el-dropdown-item>
-              </el-dropdown-menu>
+              <el-dropdown-item @click="toUserInfo">信息管理</el-dropdown-item>
+              <el-dropdown-item @click="logout">退出登录</el-dropdown-item>
+            </el-dropdown-menu>
             </template>
           </el-dropdown>
         </template>
@@ -40,13 +41,17 @@ const logout = async () => {
   ElMessage.success('已退出登录')
   router.push('/home')
 }
+
+const toUserInfo = () => {
+  router.push('/user-info')
+}
 </script>
 
 <style scoped>
 .navbar {
-  background-color: #fff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  padding: 0.5rem 0;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 0.75rem 0;
 }
 
 .navbar-content {
@@ -65,15 +70,15 @@ const logout = async () => {
 }
 
 .nav-link {
-  color: #2c3e50;
+  color: #374151;
   text-decoration: none;
   font-weight: 500;
   padding: 0.5rem 0;
-  transition: color 0.3s;
+  transition: color 0.2s ease;
 }
 
 .nav-link:hover {
-  color: #409EFF;
+  color: #059669;
 }
 
 .user-dropdown-link {
@@ -81,7 +86,12 @@ const logout = async () => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #2c3e50;
+  color: #374151;
   font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.user-dropdown-link:hover {
+  color: #059669;
 }
 </style>

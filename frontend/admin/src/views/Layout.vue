@@ -414,19 +414,20 @@ onUnmounted(() => {
 }
 
 .sidebar {
-  background-color: #304156;
+  background: #ffffff;
+  border-right: 1px solid #e5e7eb;
   transition: width 0.3s;
   overflow: hidden;
 }
 
 .sidebar-header {
-  height: 60px;
+  height: 64px;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0 20px;
-  background-color: #263445;
-  border-bottom: 1px solid #1f2d3d;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .logo {
@@ -438,7 +439,8 @@ onUnmounted(() => {
 .logo-text {
   font-size: 18px;
   font-weight: 600;
-  color: #ffffff;
+  color: #059669;
+  letter-spacing: -0.5px;
 }
 
 .sidebar-menu {
@@ -447,38 +449,56 @@ onUnmounted(() => {
 }
 
 .sidebar-menu :deep(.el-menu-item) {
-  color: #bfcbd9;
-  border-bottom: 1px solid #1f2d3d;
+  color: #374151;
+  border-radius: 6px;
+  margin: 4px 8px;
+  height: 44px;
+  line-height: 44px;
+  border: none;
 }
 
 .sidebar-menu :deep(.el-menu-item:hover) {
-  background-color: #263445;
-  color: #409eff;
+  background-color: #f0fdf4;
+  color: #047857;
 }
 
 .sidebar-menu :deep(.el-menu-item.is-active) {
-  background-color: #409eff;
-  color: #ffffff;
+  background-color: #ecfdf5;
+  color: #059669;
+  border-right: 3px solid #059669;
+}
+
+.sidebar-menu :deep(.el-menu-item .el-icon) {
+  color: #6b7280;
+}
+
+.sidebar-menu :deep(.el-menu-item:hover .el-icon) {
+  color: #047857;
+}
+
+.sidebar-menu :deep(.el-menu-item.is-active .el-icon) {
+  color: #059669;
 }
 
 .header {
-  background-color: #ffffff;
-  border-bottom: 1px solid #e4e7ed;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
-  box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
+  padding: 0 24px;
+  height: 64px;
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 16px;
 }
 
 .breadcrumb {
   font-size: 14px;
+  color: #6b7280;
 }
 
 .header-right {
@@ -494,39 +514,37 @@ onUnmounted(() => {
   padding: 8px 12px;
   border-radius: 6px;
   cursor: pointer;
-  transition: background-color 0.3s;
+  transition: background-color 0.2s ease;
+  color: #374151;
 }
 
 .user-info:hover {
-  background-color: #f5f7fa;
+  background-color: #f3f4f6;
 }
 
 .username {
   font-size: 14px;
-  color: #606266;
   font-weight: 500;
 }
 
 .main-content {
-  background-color: #f0f2f5;
-  padding: 20px;
+  background: #f9fafb;
+  padding: 24px;
   overflow-y: auto;
 }
 
-/* 页面切换动画 */
+/* 页面切换动画 - 简化 */
 .fade-transform-enter-active,
 .fade-transform-leave-active {
-  transition: all 0.3s;
+  transition: opacity 0.2s ease;
 }
 
 .fade-transform-enter-from {
   opacity: 0;
-  transform: translateX(30px);
 }
 
 .fade-transform-leave-to {
   opacity: 0;
-  transform: translateX(-30px);
 }
 
 /* 响应式设计 */
@@ -540,7 +558,7 @@ onUnmounted(() => {
   }
   
   .header-right {
-    gap: 8px;
+    gap: 12px;
   }
   
   .main-content {

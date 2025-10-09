@@ -118,8 +118,8 @@ const getWheelchairDetail = async () => {
       return
     }
     
+    // 响应拦截器会直接返回response.data，这里返回的是ApiResponse<Wheelchair>类型
     const response = await wheelchairApi.getDetail(id)
-    
     if (response.code === 200 && response.data) {
       wheelchair.value = response.data
     } else {
@@ -179,7 +179,7 @@ onMounted(() => {
 <style scoped>
 .wheelchair-detail-container {
   min-height: calc(100vh - 200px);
-  background-color: #f5f7fa;
+  background-color: #f9fafb;
 }
 
 .content-wrapper {
@@ -190,6 +190,8 @@ onMounted(() => {
 
 .detail-card {
   margin-bottom: 2rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
 }
 
 .detail-card :deep(.el-card__body) {
@@ -201,7 +203,7 @@ onMounted(() => {
   height: 400px;
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
 }
 
 .wheelchair-image img {
@@ -220,7 +222,7 @@ onMounted(() => {
   margin: 0 0 1.5rem 0;
   font-size: 2.5rem;
   font-weight: 600;
-  color: #2c3e50;
+  color: #1f2937;
   line-height: 1.2;
 }
 
@@ -239,9 +241,9 @@ onMounted(() => {
 .price-section {
   margin-bottom: 2rem;
   padding: 1.5rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-color: #f3f4f6;
   border-radius: 12px;
-  color: white;
+  border: 1px solid #e5e7eb;
 }
 
 .price {
@@ -252,17 +254,18 @@ onMounted(() => {
 
 .price-label {
   font-size: 1.2rem;
-  opacity: 0.9;
+  color: #6b7280;
 }
 
 .price-value {
   font-size: 3rem;
   font-weight: 700;
+  color: #dc2626;
 }
 
 .price-unit {
   font-size: 1.2rem;
-  opacity: 0.9;
+  color: #6b7280;
 }
 
 .description-section {
@@ -273,14 +276,14 @@ onMounted(() => {
 .description-section h3 {
   margin: 0 0 1rem 0;
   font-size: 1.5rem;
-  color: #2c3e50;
+  color: #1f2937;
 }
 
 .description {
   margin: 0;
   font-size: 1.1rem;
   line-height: 1.6;
-  color: #5a6c7d;
+  color: #4b5563;
 }
 
 .action-section {

@@ -30,6 +30,7 @@ export const useUserStore = defineStore('user', () => {
   const login = async (loginData: LoginParams) => {
     try {
       loading.value = true
+      // 响应拦截器会直接返回response.data，这里返回的是ApiResponse<LoginResponse>类型
       const response = await userApi.login(loginData)
       if (response.code === 200 && response.data) {
         setToken(response.data.token)
@@ -49,6 +50,7 @@ export const useUserStore = defineStore('user', () => {
   const register = async (registerData: RegisterParams) => {
     try {
       loading.value = true
+      // 响应拦截器会直接返回response.data，这里返回的是ApiResponse<LoginResponse>类型
       const response = await userApi.register(registerData)
       if (response.code === 200 && response.data) {
         setToken(response.data.token)
@@ -70,6 +72,7 @@ export const useUserStore = defineStore('user', () => {
     
     try {
       loading.value = true
+      // 响应拦截器会直接返回response.data，这里返回的是ApiResponse<User>类型
       const response = await userApi.getUserInfo()
       if (response.code === 200 && response.data) {
         setUser(response.data)

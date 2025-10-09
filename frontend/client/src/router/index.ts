@@ -1,6 +1,14 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import Home from '@/views/Home.vue'
 import { useUserStore } from '@/stores/user'
+
+// 定义环境变量类型
+interface ImportMetaEnv {
+  readonly BASE_URL: string
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv
+}
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -12,7 +20,7 @@ const router = createRouter({
     {
       path: '/home',
       name: 'Home',
-      component: Home
+      component: () => import('@/views/Home.vue')
     },
     {
       path: '/login',
@@ -36,17 +44,9 @@ const router = createRouter({
       component: () => import('@/views/Payment.vue'),
       meta: { requiresAuth: true }
     },
-    {
-      path: '/order/success',
-      name: 'OrderSuccess',
-      component: () => import('@/views/OrderSuccess.vue'),
-      meta: { requiresAuth: true }
-    },
-    {
-      path: '/test-order',
-      name: 'TestOrder',
-      component: () => import('@/views/TestOrder.vue')
-    }
+    { path: '/order/success', name: 'OrderSuccess', component: () => import('@/views/OrderSuccess.vue'), meta: { requiresAuth: true } },
+    { path: '/test-order', name: 'TestOrder', component: () => import('@/views/TestOrder.vue') },
+    { path: '/user-info', name: 'UserInfo', component: () => import('@/views/UserInfoManagement.vue'), meta: { requiresAuth: true } }
   ]
 })
 

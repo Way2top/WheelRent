@@ -149,6 +149,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import { ArrowLeft } from '@element-plus/icons-vue'
 import { wheelchairApi, orderApi } from '@/api/wheelchair'
+import { getDefaultAddress, addUserAddress } from '@/api/userAddress'
+import { useUserStore } from '@/stores/user'
 import type { Wheelchair } from '@/types/api'
 
 const route = useRoute()
@@ -253,6 +255,28 @@ const submitOrder = async () => {
       }
     )
     
+    // 检查是否有默认地址，如果没有则询问是否保存为默认地址
+    let shouldSaveAsDefault = false;
+    try {
+      const response = await getDefaultAddress();
+      if (!response) {
+        const saveResult = await ElMessageBox.confirm(
+          '检测到您尚未设置默认收货地址，是否将当前信息保存为默认收货地址？',
+          '保存默认地址',
+          {
+            confirmButtonText: '保存',
+            cancelButtonText: '不保存',
+            type: 'question'
+          }
+        );
+        
+        shouldSaveAsDefault = saveResult !== 'cancel';
+      }
+    } catch (error) {
+      console.error('获取默认地址失败:', error);
+      // 继续执行，不影响订单流程
+    }
+    
     submitting.value = true
     
     // 创建预订单
@@ -264,6 +288,22 @@ const submitOrder = async () => {
     })
     
     if (tempOrderResponse.code === 200 && tempOrderResponse.data) {
+      // 如果用户选择保存为默认地址，则在订单创建成功后保存
+      if (shouldSaveAsDefault) {
+        try {
+          await addUserAddress({
+            name: orderForm.name,
+            phone: orderForm.phone,
+            address: orderForm.address,
+            is_default: true
+          });
+          ElMessage.success('已保存为默认收货地址');
+        } catch (error) {
+          console.error('保存默认地址失败:', error);
+          // 保存地址失败不影响订单流程
+        }
+      }
+      
       // 跳转到支付页面
       router.push({
         name: 'Payment',
@@ -285,16 +325,35 @@ const submitOrder = async () => {
   }
 }
 
+
+
+// 获取默认地址并填充表单
+const loadDefaultAddress = async () => {
+  try {
+    const defaultAddress = await getDefaultAddress();
+    if (defaultAddress) {
+      orderForm.name = defaultAddress.name;
+      orderForm.phone = defaultAddress.phone;
+      orderForm.address = defaultAddress.address;
+    }
+  } catch (error) {
+    console.error('获取默认地址失败:', error);
+    // 静默失败，不影响用户继续操作
+  }
+}
+
 // 组件挂载时获取数据
-onMounted(() => {
-  getWheelchairDetail()
+onMounted(async () => {
+  getWheelchairDetail();
+  // 尝试加载默认地址
+  await loadDefaultAddress();
 })
 </script>
 
 <style scoped>
 .order-create-container {
   min-height: calc(100vh - 200px);
-  background-color: #f5f7fa;
+  background-color: #f9fafb;
 }
 
 .content-wrapper {
@@ -305,12 +364,14 @@ onMounted(() => {
 
 .form-card {
   height: fit-content;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
 }
 
 .form-card :deep(.el-card__header) {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  margin: -20px -20px 20px -20px;
+  background-color: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  margin: 0;
   padding: 1.5rem 2rem;
 }
 
@@ -318,11 +379,14 @@ onMounted(() => {
   margin: 0;
   font-size: 1.5rem;
   font-weight: 600;
+  color: #1f2937;
 }
 
 .preview-card {
   position: sticky;
   top: 2rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
 }
 
 .wheelchair-preview {
@@ -335,6 +399,7 @@ onMounted(() => {
   border-radius: 8px;
   overflow: hidden;
   margin-bottom: 1rem;
+  border: 1px solid #e5e7eb;
 }
 
 .preview-image img {
@@ -351,12 +416,12 @@ onMounted(() => {
   margin: 0 0 0.5rem 0;
   font-size: 1.3rem;
   font-weight: 600;
-  color: #2c3e50;
+  color: #1f2937;
 }
 
 .wheelchair-desc {
   margin: 0 0 1rem 0;
-  color: #7f8c8d;
+  color: #6b7280;
   font-size: 0.9rem;
   line-height: 1.4;
 }
@@ -373,20 +438,20 @@ onMounted(() => {
 }
 
 .detail-item .label {
-  color: #7f8c8d;
+  color: #6b7280;
   font-size: 0.9rem;
 }
 
 .detail-item .value {
-  color: #2c3e50;
+  color: #374151;
   font-weight: 500;
 }
 
 .price-info {
   padding: 1rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-color: #f3f4f6;
   border-radius: 8px;
-  color: white;
+  border: 1px solid #e5e7eb;
 }
 
 .price {
@@ -398,17 +463,18 @@ onMounted(() => {
 
 .price-label {
   font-size: 0.9rem;
-  opacity: 0.9;
+  color: #6b7280;
 }
 
 .price-value {
   font-size: 1.8rem;
   font-weight: 600;
+  color: #dc2626;
 }
 
 .price-unit {
   font-size: 0.8rem;
-  opacity: 0.9;
+  color: #6b7280;
 }
 
 .deposit {
@@ -416,35 +482,41 @@ onMounted(() => {
   align-items: baseline;
   gap: 0.25rem;
   padding-top: 0.5rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  border-top: 1px solid #d1d5db;
 }
 
 .deposit-label {
   font-size: 0.9rem;
-  opacity: 0.9;
+  color: #6b7280;
 }
 
 .deposit-value {
   font-size: 1.2rem;
   font-weight: 600;
+  color: #374151;
+}
+
+.notice-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
 }
 
 .notice-card :deep(.el-card__header) {
   padding: 1rem 1.5rem;
-  background-color: #fdf6ec;
-  border-bottom: 1px solid #faecd8;
+  background-color: #fef3c7;
+  border-bottom: 1px solid #fde68a;
 }
 
 .notice-card :deep(.el-card__header h4) {
   margin: 0;
-  color: #e6a23c;
+  color: #d97706;
   font-size: 1rem;
 }
 
 .notice-list {
   margin: 0;
   padding-left: 1.2rem;
-  color: #7f8c8d;
+  color: #6b7280;
   font-size: 0.85rem;
   line-height: 1.6;
 }

@@ -175,6 +175,9 @@ class ClientUser(db.Model):
     create_time = db.Column(db.DateTime, default=datetime.now)
     last_login = db.Column(db.DateTime)
     
+    # 关系定义
+    user_infos = db.relationship('UserInfo', backref='user', lazy=True)
+    
     def set_password(self, password):
         if isinstance(password, str):
             password = password.encode('utf-8')
@@ -198,6 +201,31 @@ class ClientUser(db.Model):
             'address': self.address,
             'create_time': self.create_time.strftime('%Y-%m-%d %H:%M:%S') if self.create_time else None,
             'last_login': self.last_login.strftime('%Y-%m-%d %H:%M:%S') if self.last_login else None
+        }
+
+class UserInfo(db.Model):
+    """用户收货信息模型"""
+    __tablename__ = 'user_info'
+    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('client_user.id'), nullable=False)
+    name = db.Column(db.String(50), nullable=False)
+    phone = db.Column(db.String(20), nullable=False)
+    address = db.Column(db.Text, nullable=False)
+    is_default = db.Column(db.Boolean, default=False)
+    create_time = db.Column(db.DateTime, default=datetime.now)
+    update_time = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'name': self.name,
+            'phone': self.phone,
+            'address': self.address,
+            'is_default': self.is_default,
+            'create_time': self.create_time.strftime('%Y-%m-%d %H:%M:%S') if self.create_time else None,
+            'update_time': self.update_time.strftime('%Y-%m-%d %H:%M:%S') if self.update_time else None
         }
 
 # 工具函数
@@ -327,6 +355,231 @@ def get_client_user_info():
         
     except Exception as e:
         return error_response(f'获取用户信息失败: {str(e)}', 500)
+
+@app.route('/api/user/address/list', methods=['GET'])
+@jwt_required()
+def get_user_addresses():
+    """获取用户所有收货地址"""
+    try:
+        identity = get_jwt_identity()
+        
+        # 验证是否为客户端用户
+        if not identity.startswith('client_'):
+            return error_response('无效的用户身份', 401)
+        
+        user_id = int(identity.split('_')[1])
+        user = ClientUser.query.get(user_id)
+        
+        if not user:
+            return error_response('用户不存在', 404)
+        
+        # 获取所有收货地址
+        addresses = UserInfo.query.filter_by(user_id=user_id).order_by(UserInfo.is_default.desc(), UserInfo.update_time.desc()).all()
+        address_list = [address.to_dict() for address in addresses]
+        
+        return success_response(address_list)
+        
+    except Exception as e:
+        return error_response(f'获取收货地址失败: {str(e)}', 500)
+
+@app.route('/api/user/address/add', methods=['POST'])
+@jwt_required()
+def add_user_address():
+    """添加新的收货地址"""
+    try:
+        identity = get_jwt_identity()
+        data = request.get_json()
+        
+        # 验证是否为客户端用户
+        if not identity.startswith('client_'):
+            return error_response('无效的用户身份', 401)
+        
+        user_id = int(identity.split('_')[1])
+        user = ClientUser.query.get(user_id)
+        
+        if not user:
+            return error_response('用户不存在', 404)
+        
+        # 验证必需字段
+        required_fields = ['name', 'phone', 'address']
+        for field in required_fields:
+            if field not in data or not data[field]:
+                return error_response(f'缺少必需字段: {field}', 400)
+        
+        name = data['name'].strip()
+        phone = data['phone'].strip()
+        address = data['address'].strip()
+        is_default = data.get('is_default', False)
+        
+        if not validate_phone(phone):
+            return error_response('手机号格式不正确', 400)
+        
+        # 如果设置为默认地址，取消其他地址的默认状态
+        if is_default:
+            UserInfo.query.filter_by(user_id=user_id).update({'is_default': False})
+        
+        # 检查是否是第一次添加地址，如果是则设置为默认
+        elif UserInfo.query.filter_by(user_id=user_id).count() == 0:
+            is_default = True
+        
+        # 创建新的收货地址
+        user_info = UserInfo(
+            user_id=user_id,
+            name=name,
+            phone=phone,
+            address=address,
+            is_default=is_default
+        )
+        
+        db.session.add(user_info)
+        db.session.commit()
+        
+        return success_response(user_info.to_dict(), '添加收货地址成功')
+        
+    except Exception as e:
+        db.session.rollback()
+        return error_response(f'添加收货地址失败: {str(e)}', 500)
+
+@app.route('/api/user/address/update/<int:address_id>', methods=['PUT'])
+@jwt_required()
+def update_user_address(address_id):
+    """更新收货地址"""
+    try:
+        identity = get_jwt_identity()
+        data = request.get_json()
+        
+        # 验证是否为客户端用户
+        if not identity.startswith('client_'):
+            return error_response('无效的用户身份', 401)
+        
+        user_id = int(identity.split('_')[1])
+        
+        # 检查地址是否存在且属于当前用户
+        user_info = UserInfo.query.filter_by(id=address_id, user_id=user_id).first()
+        
+        if not user_info:
+            return error_response('收货地址不存在', 404)
+        
+        # 更新字段
+        if 'name' in data and data['name']:
+            user_info.name = data['name'].strip()
+        
+        if 'phone' in data and data['phone']:
+            phone = data['phone'].strip()
+            if not validate_phone(phone):
+                return error_response('手机号格式不正确', 400)
+            user_info.phone = phone
+        
+        if 'address' in data and data['address']:
+            user_info.address = data['address'].strip()
+        
+        # 如果设置为默认地址，取消其他地址的默认状态
+        if 'is_default' in data and data['is_default']:
+            UserInfo.query.filter_by(user_id=user_id).update({'is_default': False})
+            user_info.is_default = True
+        
+        db.session.commit()
+        
+        return success_response(user_info.to_dict(), '更新收货地址成功')
+        
+    except Exception as e:
+        db.session.rollback()
+        return error_response(f'更新收货地址失败: {str(e)}', 500)
+
+@app.route('/api/user/address/delete/<int:address_id>', methods=['DELETE'])
+@jwt_required()
+def delete_user_address(address_id):
+    """删除收货地址"""
+    try:
+        identity = get_jwt_identity()
+        
+        # 验证是否为客户端用户
+        if not identity.startswith('client_'):
+            return error_response('无效的用户身份', 401)
+        
+        user_id = int(identity.split('_')[1])
+        
+        # 检查地址是否存在且属于当前用户
+        user_info = UserInfo.query.filter_by(id=address_id, user_id=user_id).first()
+        
+        if not user_info:
+            return error_response('收货地址不存在', 404)
+        
+        # 检查是否还有其他地址
+        remaining_count = UserInfo.query.filter_by(user_id=user_id).count() - 1
+        
+        if remaining_count > 0:
+            # 如果删除的是默认地址，将其他地址中的一个设为默认
+            if user_info.is_default:
+                other_address = UserInfo.query.filter(UserInfo.user_id == user_id, UserInfo.id != address_id).first()
+                if other_address:
+                    other_address.is_default = True
+        
+        db.session.delete(user_info)
+        db.session.commit()
+        
+        return success_response({}, '删除收货地址成功')
+        
+    except Exception as e:
+        db.session.rollback()
+        return error_response(f'删除收货地址失败: {str(e)}', 500)
+
+@app.route('/api/user/address/set_default/<int:address_id>', methods=['POST'])
+@jwt_required()
+def set_default_address(address_id):
+    """设置默认收货地址"""
+    try:
+        identity = get_jwt_identity()
+        
+        # 验证是否为客户端用户
+        if not identity.startswith('client_'):
+            return error_response('无效的用户身份', 401)
+        
+        user_id = int(identity.split('_')[1])
+        
+        # 检查地址是否存在且属于当前用户
+        user_info = UserInfo.query.filter_by(id=address_id, user_id=user_id).first()
+        
+        if not user_info:
+            return error_response('收货地址不存在', 404)
+        
+        # 取消所有地址的默认状态
+        UserInfo.query.filter_by(user_id=user_id).update({'is_default': False})
+        
+        # 设置当前地址为默认
+        user_info.is_default = True
+        
+        db.session.commit()
+        
+        return success_response(user_info.to_dict(), '设置默认收货地址成功')
+        
+    except Exception as e:
+        db.session.rollback()
+        return error_response(f'设置默认收货地址失败: {str(e)}', 500)
+
+@app.route('/api/user/address/default', methods=['GET'])
+@jwt_required()
+def get_default_address():
+    """获取默认收货地址"""
+    try:
+        identity = get_jwt_identity()
+        
+        # 验证是否为客户端用户
+        if not identity.startswith('client_'):
+            return error_response('无效的用户身份', 401)
+        
+        user_id = int(identity.split('_')[1])
+        
+        # 获取默认收货地址
+        default_address = UserInfo.query.filter_by(user_id=user_id, is_default=True).first()
+        
+        if not default_address:
+            return success_response(None)
+        
+        return success_response(default_address.to_dict())
+        
+    except Exception as e:
+        return error_response(f'获取默认收货地址失败: {str(e)}', 500)
 
 # 客户端API路由
 @app.route('/api/wheelchair/search', methods=['GET'])
@@ -738,6 +991,158 @@ def operate_wheelchair():
         db.session.rollback()
         return error_response(f'操作失败: {str(e)}', 500)
 
+@app.route('/api/admin/users', methods=['GET'])
+@admin_required
+def get_rental_user_list():
+    """获取租赁用户列表，包含订单统计"""
+    try:
+        page = int(request.args.get('page', 1))
+        limit = int(request.args.get('limit', 10))
+        keyword = request.args.get('keyword', '').strip()
+
+        query = ClientUser.query
+        if keyword:
+            like_kw = f"%{keyword}%"
+            query = query.filter(
+                or_(
+                    ClientUser.username.like(like_kw),
+                    ClientUser.phone.like(like_kw),
+                    ClientUser.address.like(like_kw)
+                )
+            )
+
+        total = query.count()
+        users = query.order_by(ClientUser.id.desc()).offset((page - 1) * limit).limit(limit).all()
+
+        def resolve_profile(u: ClientUser):
+            default_info = UserInfo.query.filter_by(user_id=u.id, is_default=True).first()
+            if not default_info:
+                default_info = UserInfo.query.filter_by(user_id=u.id).first()
+            name = default_info.name if default_info else u.username
+            phone = u.phone or (default_info.phone if default_info else None)
+            address = (default_info.address if default_info else u.address)
+            return name, phone, address
+
+        active_status = ['待配送', '已配送', '使用中']
+        result_list = []
+        for u in users:
+            name, phone, address = resolve_profile(u)
+            total_orders = 0
+            active_orders = 0
+            last_order_time = None
+            if phone:
+                q = FormalOrder.query.filter(FormalOrder.user_phone == phone)
+                total_orders = q.count()
+                active_orders = q.filter(FormalOrder.status.in_(active_status)).count()
+                last = q.order_by(FormalOrder.create_time.desc()).first()
+                if last and last.create_time:
+                    last_order_time = last.create_time.strftime('%Y-%m-%d %H:%M:%S')
+
+            result_list.append({
+                'id': u.id,
+                'name': name,
+                'phone': phone or '',
+                'address': address or '',
+                'total_orders': total_orders,
+                'active_orders': active_orders,
+                'created_at': u.create_time.strftime('%Y-%m-%d %H:%M:%S') if u.create_time else None,
+                'last_order_time': last_order_time
+            })
+
+        return success_response({
+            'list': result_list,
+            'total': total,
+            'page': page,
+            'limit': limit,
+            'pages': (total + limit - 1) // limit
+        })
+    except Exception as e:
+        return error_response(f'获取租赁用户列表失败: {str(e)}', 500)
+
+@app.route('/api/admin/users/<int:user_id>', methods=['GET'])
+@admin_required
+def get_rental_user_detail(user_id: int):
+    """获取租赁用户详情，包含订单统计"""
+    try:
+        u = ClientUser.query.get(user_id)
+        if not u:
+            return error_response('用户不存在', 404)
+
+        default_info = UserInfo.query.filter_by(user_id=u.id, is_default=True).first()
+        if not default_info:
+            default_info = UserInfo.query.filter_by(user_id=u.id).first()
+        name = default_info.name if default_info else u.username
+        phone = u.phone or (default_info.phone if default_info else None)
+        address = (default_info.address if default_info else u.address)
+
+        active_status = ['待配送', '已配送', '使用中']
+        total_orders = 0
+        active_orders = 0
+        last_order_time = None
+        if phone:
+            q = FormalOrder.query.filter(FormalOrder.user_phone == phone)
+            total_orders = q.count()
+            active_orders = q.filter(FormalOrder.status.in_(active_status)).count()
+            last = q.order_by(FormalOrder.create_time.desc()).first()
+            if last and last.create_time:
+                last_order_time = last.create_time.strftime('%Y-%m-%d %H:%M:%S')
+
+        return success_response({
+            'id': u.id,
+            'name': name,
+            'phone': phone or '',
+            'address': address or '',
+            'total_orders': total_orders,
+            'active_orders': active_orders,
+            'created_at': u.create_time.strftime('%Y-%m-%d %H:%M:%S') if u.create_time else None,
+            'last_order_time': last_order_time
+        })
+    except Exception as e:
+        return error_response(f'获取租赁用户详情失败: {str(e)}', 500)
+
+@app.route('/api/admin/users/<int:user_id>/orders', methods=['GET'])
+@admin_required
+def get_rental_user_orders(user_id: int):
+    """获取租赁用户订单列表"""
+    try:
+        page = int(request.args.get('page', 1))
+        limit = int(request.args.get('limit', 10))
+        status = request.args.get('status', '').strip()
+
+        u = ClientUser.query.get(user_id)
+        if not u:
+            return success_response({
+                'list': [], 'total': 0, 'page': page, 'limit': limit, 'pages': 0
+            })
+
+        default_info = UserInfo.query.filter_by(user_id=u.id, is_default=True).first()
+        if not default_info:
+            default_info = UserInfo.query.filter_by(user_id=u.id).first()
+        phone = u.phone or (default_info.phone if default_info else None)
+
+        if not phone:
+            return success_response({
+                'list': [], 'total': 0, 'page': page, 'limit': limit, 'pages': 0
+            })
+
+        query = FormalOrder.query.filter(FormalOrder.user_phone == phone)
+        if status:
+            query = query.filter(FormalOrder.status == status)
+
+        total = query.count()
+        orders = query.order_by(FormalOrder.create_time.desc()).offset((page - 1) * limit).limit(limit).all()
+        order_list = [o.to_dict() for o in orders]
+
+        return success_response({
+            'list': order_list,
+            'total': total,
+            'page': page,
+            'limit': limit,
+            'pages': (total + limit - 1) // limit
+        })
+    except Exception as e:
+        return error_response(f'获取租赁用户订单失败: {str(e)}', 500)
+
 @app.route('/api/admin/order/list', methods=['GET'])
 @admin_required
 def get_order_list():
@@ -869,3 +1274,81 @@ if __name__ == '__main__':
         port=5001,
         debug=True
     )
+
+
+@app.route('/api/admin/users/<int:user_id>', methods=['PUT'])
+@admin_required
+def update_rental_user(user_id: int):
+    """更新租赁用户信息（姓名/手机号/地址），并同步默认收货信息"""
+    try:
+        data = request.get_json() or {}
+        name = (data.get('name') or '').strip()
+        phone = (data.get('phone') or '').strip()
+        address = (data.get('address') or '').strip()
+
+        u = ClientUser.query.get(user_id)
+        if not u:
+            return error_response('用户不存在', 404)
+
+        if phone and not validate_phone(phone):
+            return error_response('手机号格式不正确', 400)
+
+        # 更新客户端用户主表字段
+        if phone:
+            u.phone = phone
+        if address:
+            u.address = address
+
+        # 同步/更新默认收货信息
+        default_info = UserInfo.query.filter_by(user_id=u.id, is_default=True).first()
+        if not default_info and (name or phone or address):
+            default_info = UserInfo(
+                user_id=u.id,
+                name=name or u.username,
+                phone=phone or (u.phone or ''),
+                address=address or (u.address or ''),
+                is_default=True
+            )
+            db.session.add(default_info)
+        else:
+            if default_info:
+                if name:
+                    default_info.name = name
+                if phone:
+                    default_info.phone = phone
+                if address:
+                    default_info.address = address
+
+        db.session.commit()
+
+        # 生成与详情接口一致的响应结构
+        default_info = UserInfo.query.filter_by(user_id=u.id, is_default=True).first() or UserInfo.query.filter_by(user_id=u.id).first()
+        resp_name = default_info.name if default_info else u.username
+        resp_phone = u.phone or (default_info.phone if default_info else '')
+        resp_address = (default_info.address if default_info else (u.address or ''))
+
+        active_status = ['待配送', '已配送', '使用中']
+        total_orders = 0
+        active_orders = 0
+        last_order_time = None
+        if resp_phone:
+            q = FormalOrder.query.filter(FormalOrder.user_phone == resp_phone)
+            total_orders = q.count()
+            active_orders = q.filter(FormalOrder.status.in_(active_status)).count()
+            last = q.order_by(FormalOrder.create_time.desc()).first()
+            if last and last.create_time:
+                last_order_time = last.create_time.strftime('%Y-%m-%d %H:%M:%S')
+
+        return success_response({
+            'id': u.id,
+            'name': resp_name,
+            'phone': resp_phone,
+            'address': resp_address,
+            'total_orders': total_orders,
+            'active_orders': active_orders,
+            'created_at': u.create_time.strftime('%Y-%m-%d %H:%M:%S') if u.create_time else None,
+            'last_order_time': last_order_time
+        }, '更新成功')
+    except Exception as e:
+        db.session.rollback()
+        return error_response(f'更新租赁用户失败: {str(e)}', 500)
