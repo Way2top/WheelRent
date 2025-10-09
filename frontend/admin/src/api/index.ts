@@ -202,6 +202,11 @@ export const userApi = {
     return api.get(`/admin/users/${id}`)
   },
   
+  // 更新用户信息
+  update: (id: number, data: Partial<User>): Promise<ApiResponse<User>> => {
+    return api.put(`/admin/users/${id}`, data)
+  },
+  
   // 获取用户订单历史
   getUserOrders: (userId: number, params: SearchParams): Promise<ApiResponse<PaginatedResponse<Order>>> => {
     return api.get(`/admin/users/${userId}/orders`, { params })

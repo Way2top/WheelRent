@@ -991,6 +991,158 @@ def operate_wheelchair():
         db.session.rollback()
         return error_response(f'操作失败: {str(e)}', 500)
 
+@app.route('/api/admin/users', methods=['GET'])
+@admin_required
+def get_rental_user_list():
+    """获取租赁用户列表，包含订单统计"""
+    try:
+        page = int(request.args.get('page', 1))
+        limit = int(request.args.get('limit', 10))
+        keyword = request.args.get('keyword', '').strip()
+
+        query = ClientUser.query
+        if keyword:
+            like_kw = f"%{keyword}%"
+            query = query.filter(
+                or_(
+                    ClientUser.username.like(like_kw),
+                    ClientUser.phone.like(like_kw),
+                    ClientUser.address.like(like_kw)
+                )
+            )
+
+        total = query.count()
+        users = query.order_by(ClientUser.id.desc()).offset((page - 1) * limit).limit(limit).all()
+
+        def resolve_profile(u: ClientUser):
+            default_info = UserInfo.query.filter_by(user_id=u.id, is_default=True).first()
+            if not default_info:
+                default_info = UserInfo.query.filter_by(user_id=u.id).first()
+            name = default_info.name if default_info else u.username
+            phone = u.phone or (default_info.phone if default_info else None)
+            address = (default_info.address if default_info else u.address)
+            return name, phone, address
+
+        active_status = ['待配送', '已配送', '使用中']
+        result_list = []
+        for u in users:
+            name, phone, address = resolve_profile(u)
+            total_orders = 0
+            active_orders = 0
+            last_order_time = None
+            if phone:
+                q = FormalOrder.query.filter(FormalOrder.user_phone == phone)
+                total_orders = q.count()
+                active_orders = q.filter(FormalOrder.status.in_(active_status)).count()
+                last = q.order_by(FormalOrder.create_time.desc()).first()
+                if last and last.create_time:
+                    last_order_time = last.create_time.strftime('%Y-%m-%d %H:%M:%S')
+
+            result_list.append({
+                'id': u.id,
+                'name': name,
+                'phone': phone or '',
+                'address': address or '',
+                'total_orders': total_orders,
+                'active_orders': active_orders,
+                'created_at': u.create_time.strftime('%Y-%m-%d %H:%M:%S') if u.create_time else None,
+                'last_order_time': last_order_time
+            })
+
+        return success_response({
+            'list': result_list,
+            'total': total,
+            'page': page,
+            'limit': limit,
+            'pages': (total + limit - 1) // limit
+        })
+    except Exception as e:
+        return error_response(f'获取租赁用户列表失败: {str(e)}', 500)
+
+@app.route('/api/admin/users/<int:user_id>', methods=['GET'])
+@admin_required
+def get_rental_user_detail(user_id: int):
+    """获取租赁用户详情，包含订单统计"""
+    try:
+        u = ClientUser.query.get(user_id)
+        if not u:
+            return error_response('用户不存在', 404)
+
+        default_info = UserInfo.query.filter_by(user_id=u.id, is_default=True).first()
+        if not default_info:
+            default_info = UserInfo.query.filter_by(user_id=u.id).first()
+        name = default_info.name if default_info else u.username
+        phone = u.phone or (default_info.phone if default_info else None)
+        address = (default_info.address if default_info else u.address)
+
+        active_status = ['待配送', '已配送', '使用中']
+        total_orders = 0
+        active_orders = 0
+        last_order_time = None
+        if phone:
+            q = FormalOrder.query.filter(FormalOrder.user_phone == phone)
+            total_orders = q.count()
+            active_orders = q.filter(FormalOrder.status.in_(active_status)).count()
+            last = q.order_by(FormalOrder.create_time.desc()).first()
+            if last and last.create_time:
+                last_order_time = last.create_time.strftime('%Y-%m-%d %H:%M:%S')
+
+        return success_response({
+            'id': u.id,
+            'name': name,
+            'phone': phone or '',
+            'address': address or '',
+            'total_orders': total_orders,
+            'active_orders': active_orders,
+            'created_at': u.create_time.strftime('%Y-%m-%d %H:%M:%S') if u.create_time else None,
+            'last_order_time': last_order_time
+        })
+    except Exception as e:
+        return error_response(f'获取租赁用户详情失败: {str(e)}', 500)
+
+@app.route('/api/admin/users/<int:user_id>/orders', methods=['GET'])
+@admin_required
+def get_rental_user_orders(user_id: int):
+    """获取租赁用户订单列表"""
+    try:
+        page = int(request.args.get('page', 1))
+        limit = int(request.args.get('limit', 10))
+        status = request.args.get('status', '').strip()
+
+        u = ClientUser.query.get(user_id)
+        if not u:
+            return success_response({
+                'list': [], 'total': 0, 'page': page, 'limit': limit, 'pages': 0
+            })
+
+        default_info = UserInfo.query.filter_by(user_id=u.id, is_default=True).first()
+        if not default_info:
+            default_info = UserInfo.query.filter_by(user_id=u.id).first()
+        phone = u.phone or (default_info.phone if default_info else None)
+
+        if not phone:
+            return success_response({
+                'list': [], 'total': 0, 'page': page, 'limit': limit, 'pages': 0
+            })
+
+        query = FormalOrder.query.filter(FormalOrder.user_phone == phone)
+        if status:
+            query = query.filter(FormalOrder.status == status)
+
+        total = query.count()
+        orders = query.order_by(FormalOrder.create_time.desc()).offset((page - 1) * limit).limit(limit).all()
+        order_list = [o.to_dict() for o in orders]
+
+        return success_response({
+            'list': order_list,
+            'total': total,
+            'page': page,
+            'limit': limit,
+            'pages': (total + limit - 1) // limit
+        })
+    except Exception as e:
+        return error_response(f'获取租赁用户订单失败: {str(e)}', 500)
+
 @app.route('/api/admin/order/list', methods=['GET'])
 @admin_required
 def get_order_list():
@@ -1122,3 +1274,81 @@ if __name__ == '__main__':
         port=5001,
         debug=True
     )
+
+
+@app.route('/api/admin/users/<int:user_id>', methods=['PUT'])
+@admin_required
+def update_rental_user(user_id: int):
+    """更新租赁用户信息（姓名/手机号/地址），并同步默认收货信息"""
+    try:
+        data = request.get_json() or {}
+        name = (data.get('name') or '').strip()
+        phone = (data.get('phone') or '').strip()
+        address = (data.get('address') or '').strip()
+
+        u = ClientUser.query.get(user_id)
+        if not u:
+            return error_response('用户不存在', 404)
+
+        if phone and not validate_phone(phone):
+            return error_response('手机号格式不正确', 400)
+
+        # 更新客户端用户主表字段
+        if phone:
+            u.phone = phone
+        if address:
+            u.address = address
+
+        # 同步/更新默认收货信息
+        default_info = UserInfo.query.filter_by(user_id=u.id, is_default=True).first()
+        if not default_info and (name or phone or address):
+            default_info = UserInfo(
+                user_id=u.id,
+                name=name or u.username,
+                phone=phone or (u.phone or ''),
+                address=address or (u.address or ''),
+                is_default=True
+            )
+            db.session.add(default_info)
+        else:
+            if default_info:
+                if name:
+                    default_info.name = name
+                if phone:
+                    default_info.phone = phone
+                if address:
+                    default_info.address = address
+
+        db.session.commit()
+
+        # 生成与详情接口一致的响应结构
+        default_info = UserInfo.query.filter_by(user_id=u.id, is_default=True).first() or UserInfo.query.filter_by(user_id=u.id).first()
+        resp_name = default_info.name if default_info else u.username
+        resp_phone = u.phone or (default_info.phone if default_info else '')
+        resp_address = (default_info.address if default_info else (u.address or ''))
+
+        active_status = ['待配送', '已配送', '使用中']
+        total_orders = 0
+        active_orders = 0
+        last_order_time = None
+        if resp_phone:
+            q = FormalOrder.query.filter(FormalOrder.user_phone == resp_phone)
+            total_orders = q.count()
+            active_orders = q.filter(FormalOrder.status.in_(active_status)).count()
+            last = q.order_by(FormalOrder.create_time.desc()).first()
+            if last and last.create_time:
+                last_order_time = last.create_time.strftime('%Y-%m-%d %H:%M:%S')
+
+        return success_response({
+            'id': u.id,
+            'name': resp_name,
+            'phone': resp_phone,
+            'address': resp_address,
+            'total_orders': total_orders,
+            'active_orders': active_orders,
+            'created_at': u.create_time.strftime('%Y-%m-%d %H:%M:%S') if u.create_time else None,
+            'last_order_time': last_order_time
+        }, '更新成功')
+    except Exception as e:
+        db.session.rollback()
+        return error_response(f'更新租赁用户失败: {str(e)}', 500)

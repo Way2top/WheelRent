@@ -98,7 +98,7 @@
           </template>
         </el-table-column>
         
-        <el-table-column label="操作" width="150" fixed="right">
+        <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <el-button type="text" size="small" @click="handleViewDetail(row)">
               <el-icon><View /></el-icon>
@@ -108,6 +108,11 @@
             <el-button type="text" size="small" @click="handleViewOrders(row)">
               <el-icon><Document /></el-icon>
               订单
+            </el-button>
+            
+            <el-button type="text" size="small" @click="openEditDialog(row)">
+              <el-icon><Edit /></el-icon>
+              编辑
             </el-button>
           </template>
         </el-table-column>
@@ -147,6 +152,25 @@
           </el-descriptions-item>
         </el-descriptions>
       </div>
+    </el-dialog>
+    
+    <!-- 编辑用户对话框 -->
+    <el-dialog v-model="editDialogVisible" title="编辑用户" width="600px">
+      <el-form label-width="80px">
+        <el-form-item label="姓名">
+          <el-input v-model="editForm.name" placeholder="请输入姓名" />
+        </el-form-item>
+        <el-form-item label="手机号">
+          <el-input v-model="editForm.phone" placeholder="请输入手机号" />
+        </el-form-item>
+        <el-form-item label="地址">
+          <el-input v-model="editForm.address" placeholder="请输入地址" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="editDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="savingEdit" @click="handleSaveEdit">保存</el-button>
+      </template>
     </el-dialog>
     
     <!-- 用户订单对话框 -->
@@ -242,7 +266,8 @@ import {
   Refresh,
   View,
   Document,
-  User
+  User,
+  Edit
 } from '@element-plus/icons-vue'
 import { userApi } from '@/api'
 import type { User as UserType, Order, SearchParams } from '@/types/api'
@@ -257,6 +282,15 @@ const userOrders = ref<Order[]>([])
 const currentUser = ref<UserType | null>(null)
 const total = ref(0)
 const ordersTotal = ref(0)
+
+// 编辑对话框状态与表单
+const editDialogVisible = ref(false)
+const savingEdit = ref(false)
+const editForm = reactive<{ name: string; phone: string; address: string }>({
+  name: '',
+  phone: '',
+  address: ''
+})
 
 // 搜索参数
 const searchParams = reactive<SearchParams>({
@@ -294,72 +328,26 @@ const formatTime = (timeStr: string) => {
 const getUserList = async () => {
   try {
     loading.value = true
-    
-    // 模拟API调用
-    // const response = await userApi.getList(searchParams)
-    
-    // 模拟数据
-    const mockData = {
-      items: [
-        {
-          id: 1,
-          name: '张三',
-          phone: '13800138001',
-          address: '北京市朝阳区某某街道123号',
-          total_orders: 5,
-          active_orders: 1,
-          created_at: '2025-09-01T10:00:00Z',
-last_order_time: '2025-09-15T10:30:00Z'
-        },
-        {
-          id: 2,
-          name: '李四',
-          phone: '13800138002',
-          address: '上海市浦东新区某某路456号',
-          total_orders: 3,
-          active_orders: 0,
-          created_at: '2025-09-02T10:00:00Z',
-last_order_time: '2025-09-10T15:20:00Z'
-        },
-        {
-          id: 3,
-          name: '王五',
-          phone: '13800138003',
-          address: '广州市天河区某某大道789号',
-          total_orders: 8,
-          active_orders: 2,
-          created_at: '2023-12-15T10:00:00Z',
-          last_order_time: '2025-09-14T09:00:00Z'
-        },
-        {
-          id: 4,
-          name: '赵六',
-          phone: '13800138004',
-          address: '深圳市南山区某某科技园101号',
-          total_orders: 1,
-          active_orders: 0,
-          created_at: '2025-09-10T10:00:00Z',
-last_order_time: '2025-09-12T14:30:00Z'
-        },
-        {
-          id: 5,
-          name: '钱七',
-          phone: '13800138005',
-          address: '杭州市西湖区某某路202号',
-          total_orders: 0,
-          active_orders: 0,
-          created_at: '2025-09-14T10:00:00Z',
-          last_order_time: null
-        }
-      ],
-      total: 5,
-      page: 1,
-      limit: 20,
-      totalPages: 1
+    const response = await userApi.getList(searchParams)
+    if (response.code === 200 && response.data) {
+      // 适配后端 { list, total, page, limit, pages }
+      const data: any = response.data
+      tableData.value = (data.items ?? data.list ?? []).map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        phone: item.phone,
+        address: item.address,
+        total_orders: item.total_orders,
+        active_orders: item.active_orders,
+        created_at: item.created_at,
+        last_order_time: item.last_order_time
+      }))
+      total.value = data.total ?? 0
+      searchParams.page = data.page ?? searchParams.page
+      searchParams.limit = data.limit ?? searchParams.limit
+    } else {
+      throw new Error(response.message || '获取用户列表失败')
     }
-    
-    tableData.value = mockData.items
-    total.value = mockData.total
   } catch (error) {
     console.error('获取用户列表失败:', error)
     ElMessage.error('获取数据失败，请稍后重试')
@@ -374,52 +362,15 @@ const getUserOrders = async () => {
   
   try {
     ordersLoading.value = true
-    
-    // 模拟API调用
-    // const response = await userApi.getUserOrders(currentUser.value.id, orderSearchParams)
-    
-    // 模拟数据
-    const mockOrders = [
-      {
-        id: 1,
-        order_no: 'WR20250915001',
-        user_name: currentUser.value.name,
-        user_phone: currentUser.value.phone,
-        user_address: currentUser.value.address,
-        wheelchair_id: 1,
-        wheelchair_name: '标准轮椅 SW-001',
-        deposit: 50,
-        status: '使用中',
-        create_time: '2025-09-15T10:30:00Z',
-delivery_time: '2025-09-15T14:30:00Z',
-        return_time: null,
-        notes: '用户要求下午配送'
-      },
-      {
-        id: 2,
-        order_no: 'WR20250910002',
-        user_name: currentUser.value.name,
-        user_phone: currentUser.value.phone,
-        user_address: currentUser.value.address,
-        wheelchair_id: 2,
-        wheelchair_name: '电动轮椅 EW-002',
-        deposit: 120,
-        status: '已归还',
-        create_time: '2025-09-10T11:00:00Z',
-delivery_time: '2025-09-10T15:00:00Z',
-return_time: '2025-09-12T10:00:00Z',
-        notes: null
-      }
-    ]
-    
-    // 根据状态筛选
-    let filteredOrders = mockOrders
-    if (orderSearchParams.status) {
-      filteredOrders = mockOrders.filter(order => order.status === orderSearchParams.status)
+    const response = await userApi.getUserOrders(currentUser.value.id, orderSearchParams)
+    if (response.code === 200 && response.data) {
+      const data: any = response.data
+      const items = (data.items ?? data.list ?? [])
+      userOrders.value = items
+      ordersTotal.value = data.total ?? items.length
+    } else {
+      throw new Error(response.message || '获取订单数据失败')
     }
-    
-    userOrders.value = filteredOrders
-    ordersTotal.value = filteredOrders.length
   } catch (error) {
     console.error('获取用户订单失败:', error)
     ElMessage.error('获取订单数据失败')
@@ -504,6 +455,52 @@ const handleViewOrderDetail = (order: Order) => {
 onMounted(() => {
   getUserList()
 })
+// 打开编辑对话框
+const openEditDialog = (row: UserType) => {
+  currentUser.value = row
+  editForm.name = row.name || ''
+  editForm.phone = row.phone || ''
+  editForm.address = row.address || ''
+  editDialogVisible.value = true
+}
+
+// 保存编辑
+const handleSaveEdit = async () => {
+  if (!currentUser.value) return
+  try {
+    savingEdit.value = true
+    const res = await userApi.update(currentUser.value.id, {
+      name: editForm.name,
+      phone: editForm.phone,
+      address: editForm.address
+    })
+    if (res.code === 200 && res.data) {
+      const updated = res.data
+      currentUser.value = {
+        ...currentUser.value,
+        name: updated.name,
+        phone: updated.phone,
+        address: updated.address,
+        total_orders: updated.total_orders ?? currentUser.value.total_orders,
+        active_orders: updated.active_orders ?? currentUser.value.active_orders,
+        last_order_time: updated.last_order_time ?? currentUser.value.last_order_time
+      }
+      const idx = tableData.value.findIndex(u => u.id === currentUser.value!.id)
+      if (idx !== -1) {
+        tableData.value[idx] = { ...tableData.value[idx], ...currentUser.value }
+      }
+      ElMessage.success('保存成功')
+      editDialogVisible.value = false
+    } else {
+      throw new Error(res.message || '更新失败')
+    }
+  } catch (e) {
+    console.error('更新用户失败:', e)
+    ElMessage.error('更新失败，请稍后重试')
+  } finally {
+    savingEdit.value = false
+  }
+}
 </script>
 
 <style scoped>
