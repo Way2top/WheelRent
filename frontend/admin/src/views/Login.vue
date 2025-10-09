@@ -196,12 +196,11 @@ onMounted(() => {
 <style scoped>
 .login-container {
   min-height: 100vh;
+  background: #f8f6f3;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   position: relative;
-  overflow: hidden;
 }
 
 .login-wrapper {
@@ -210,18 +209,18 @@ onMounted(() => {
 }
 
 .login-card {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   width: 400px;
   padding: 40px;
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 16px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  position: relative;
+  border: 1px solid #e8e6e3;
 }
 
 .login-header {
   text-align: center;
-  margin-bottom: 40px;
+  margin-bottom: 32px;
 }
 
 .logo {
@@ -229,16 +228,18 @@ onMounted(() => {
 }
 
 .title {
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 600;
   color: #2c3e50;
   margin: 0 0 8px 0;
+  letter-spacing: -0.5px;
 }
 
 .subtitle {
-  font-size: 16px;
-  color: #7f8c8d;
+  font-size: 14px;
+  color: #6b7280;
   margin: 0;
+  font-weight: 400;
 }
 
 .login-form {
@@ -251,10 +252,19 @@ onMounted(() => {
 
 .login-button {
   width: 100%;
-  height: 48px;
+  height: 44px;
   font-size: 16px;
   font-weight: 500;
+  background: #059669;
+  border: none;
   border-radius: 8px;
+  transition: all 0.2s ease;
+  color: white;
+}
+
+.login-button:hover {
+  background: #047857;
+  box-shadow: 0 2px 8px rgba(5, 150, 105, 0.25);
 }
 
 .login-footer {
@@ -334,12 +344,12 @@ onMounted(() => {
 @media (max-width: 480px) {
   .login-card {
     width: 90%;
-    padding: 30px 20px;
+    padding: 32px 24px;
     margin: 20px;
   }
   
   .title {
-    font-size: 24px;
+    font-size: 22px;
   }
   
   .subtitle {
@@ -347,23 +357,28 @@ onMounted(() => {
   }
 }
 
-/* 深色模式适配 */
+/* 暗色模式适配 */
 @media (prefers-color-scheme: dark) {
+  .login-container {
+    background: #1f2937;
+  }
+  
   .login-card {
-    background: rgba(30, 30, 30, 0.95);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #374151;
+    border-color: #4b5563;
+    color: #f9fafb;
   }
   
   .title {
-    color: #ecf0f1;
+    color: #f9fafb;
   }
   
   .subtitle {
-    color: #bdc3c7;
+    color: #d1d5db;
   }
   
   .copyright {
-    color: #7f8c8d;
+    color: #9ca3af;
   }
 }
 </style>

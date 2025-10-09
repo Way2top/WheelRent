@@ -502,48 +502,57 @@ onMounted(() => {
 }
 
 .stats-row {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .charts-row {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .stats-card {
-  border-radius: 8px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
   overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.stats-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
 }
 
 .stats-content {
   display: flex;
   align-items: center;
   gap: 16px;
+  padding: 24px;
 }
 
 .stats-icon {
-  width: 60px;
-  height: 60px;
+  width: 56px;
+  height: 56px;
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
+  flex-shrink: 0;
 }
 
 .stats-icon.wheelchair {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #059669;
 }
 
 .stats-icon.available {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  background: #0d9488;
 }
 
 .stats-icon.orders {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  background: #0284c7;
 }
 
 .stats-icon.users {
-  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+  background: #7c3aed;
 }
 
 .stats-info {
@@ -553,24 +562,26 @@ onMounted(() => {
 .stats-number {
   font-size: 28px;
   font-weight: 600;
-  color: #2c3e50;
+  color: #111827;
   line-height: 1;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
 .stats-label {
   font-size: 14px;
-  color: #7f8c8d;
+  color: #6b7280;
+  font-weight: 500;
 }
 
 .chart-card,
 .activity-card {
-  border-radius: 8px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
   overflow: hidden;
 }
 
 .chart-container {
-  padding: 10px 0;
+  padding: 16px 0;
 }
 
 .activity-list {
@@ -579,20 +590,20 @@ onMounted(() => {
 }
 
 .activity-content {
-  padding-left: 10px;
+  padding-left: 8px;
 }
 
 .activity-title {
   font-size: 14px;
   font-weight: 500;
-  color: #2c3e50;
+  color: #374151;
   margin-bottom: 4px;
 }
 
 .activity-desc {
-  font-size: 12px;
-  color: #7f8c8d;
-  line-height: 1.4;
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.5;
 }
 
 .empty-activities {
@@ -606,6 +617,7 @@ onMounted(() => {
 @media (max-width: 768px) {
   .stats-content {
     gap: 12px;
+    padding: 20px;
   }
   
   .stats-icon {
@@ -622,7 +634,12 @@ onMounted(() => {
   }
   
   .stats-label {
-    font-size: 12px;
+    font-size: 13px;
+  }
+  
+  .stats-row,
+  .charts-row {
+    margin-bottom: 16px;
   }
 }
 </style>

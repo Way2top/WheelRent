@@ -505,16 +505,23 @@ const handleSaveEdit = async () => {
 
 <style scoped>
 .user-management {
-  padding: 0;
+  padding: 24px;
 }
 
 .table-toolbar {
-  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
 }
 
 .search-form {
   display: flex;
-  gap: 16px;
+  gap: 12px;
   align-items: center;
   flex-wrap: wrap;
 }
@@ -586,6 +593,10 @@ const handleSaveEdit = async () => {
 
 /* 响应式设计 */
 @media (max-width: 768px) {
+  .user-management {
+    padding: 16px;
+  }
+  
   .search-form {
     justify-content: center;
   }

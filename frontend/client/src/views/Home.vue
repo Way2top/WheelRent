@@ -226,7 +226,7 @@ onMounted(() => {
 <style scoped>
 .home-container {
   min-height: calc(100vh - 200px);
-  background-color: #f5f7fa;
+  background-color: #f9fafb;
 }
 
 .content-wrapper {
@@ -240,8 +240,9 @@ onMounted(() => {
 }
 
 .search-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
 }
 
 .search-card :deep(.el-card__body) {
@@ -257,12 +258,13 @@ onMounted(() => {
   margin: 0 0 0.5rem 0;
   font-size: 2rem;
   font-weight: 600;
+  color: #1f2937;
 }
 
 .search-header p {
   margin: 0;
   font-size: 1.1rem;
-  opacity: 0.9;
+  color: #6b7280;
 }
 
 .wheelchair-list {
@@ -271,11 +273,14 @@ onMounted(() => {
 
 .wheelchair-card {
   height: 100%;
-  transition: transform 0.3s ease;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  transition: all 0.2s ease;
 }
 
 .wheelchair-card:hover {
-  transform: translateY(-5px);
+  border-color: #059669;
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.1);
 }
 
 .wheelchair-image {
@@ -299,12 +304,12 @@ onMounted(() => {
   margin: 0 0 0.5rem 0;
   font-size: 1.2rem;
   font-weight: 600;
-  color: #2c3e50;
+  color: #1f2937;
 }
 
 .wheelchair-desc {
   margin: 0 0 0.5rem 0;
-  color: #7f8c8d;
+  color: #6b7280;
   font-size: 0.9rem;
   line-height: 1.4;
   display: -webkit-box;
@@ -315,7 +320,7 @@ onMounted(() => {
 
 .wheelchair-manufacturer {
   margin: 0 0 1rem 0;
-  color: #95a5a6;
+  color: #9ca3af;
   font-size: 0.85rem;
   display: flex;
   align-items: center;
@@ -337,18 +342,18 @@ onMounted(() => {
 
 .price-label {
   font-size: 0.9rem;
-  color: #7f8c8d;
+  color: #6b7280;
 }
 
 .price-value {
   font-size: 1.5rem;
   font-weight: 600;
-  color: #e74c3c;
+  color: #dc2626;
 }
 
 .price-unit {
   font-size: 0.8rem;
-  color: #95a5a6;
+  color: #9ca3af;
 }
 
 .wheelchair-actions {

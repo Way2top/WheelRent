@@ -60,78 +60,79 @@ const setFontSize = (size: 'small' | 'default' | 'large') => {
 </script>
 
 <style>
-/* 全局字体大小控制 */
-#app {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  font-size: var(--app-font-size, 14px);
+/* 全局字体大小样式 */
+.font-size-small {
+  font-size: 14px;
 }
 
-/* 字体大小类 */
-.font-size-small {
-  --app-font-size: 12px;
-}
+.font-size-small h1 { font-size: 1.8rem; }
+.font-size-small h2 { font-size: 1.5rem; }
+.font-size-small h3 { font-size: 1.3rem; }
+.font-size-small .el-button { font-size: 14px; }
+.font-size-small .el-input__inner { font-size: 14px; }
+.font-size-small .el-form-item__label { font-size: 14px; }
+.font-size-small .el-card__header { font-size: 1.1rem; }
+.font-size-small .wheelchair-name { font-size: 1.1rem; }
+.font-size-small .price-value { font-size: 1.3rem; }
+.font-size-small .search-header h2 { font-size: 1.8rem; }
 
 .font-size-default {
-  --app-font-size: 14px;
+  font-size: 16px;
 }
+
+.font-size-default h1 { font-size: 2rem; }
+.font-size-default h2 { font-size: 1.8rem; }
+.font-size-default h3 { font-size: 1.5rem; }
+.font-size-default .el-button { font-size: 16px; }
+.font-size-default .el-input__inner { font-size: 16px; }
+.font-size-default .el-form-item__label { font-size: 16px; }
+.font-size-default .el-card__header { font-size: 1.2rem; }
+.font-size-default .wheelchair-name { font-size: 1.2rem; }
+.font-size-default .price-value { font-size: 1.5rem; }
+.font-size-default .search-header h2 { font-size: 2rem; }
 
 .font-size-large {
-  --app-font-size: 18px;
+  font-size: 18px;
 }
 
-/* 确保主要文本元素都继承字体大小 */
-.font-size-small p,
-.font-size-small span,
-.font-size-small div:not(.el-icon),
-.font-size-small .el-card__body,
-.font-size-small .el-form-item__label,
-.font-size-small .el-table {
-  font-size: 12px !important;
+.font-size-large h1 { font-size: 2.2rem; }
+.font-size-large h2 { font-size: 2rem; }
+.font-size-large h3 { font-size: 1.8rem; }
+.font-size-large .el-button { font-size: 18px; }
+.font-size-large .el-input__inner { font-size: 18px; }
+.font-size-large .el-form-item__label { font-size: 18px; }
+.font-size-large .el-card__header { font-size: 1.3rem; }
+.font-size-large .wheelchair-name { font-size: 1.3rem; }
+.font-size-large .price-value { font-size: 1.8rem; }
+.font-size-large .search-header h2 { font-size: 2.2rem; }
+
+.font-size-large .header-content {
+  padding: 0 1.5rem;
 }
 
-.font-size-default p,
-.font-size-default span,
-.font-size-default div:not(.el-icon),
-.font-size-default .el-card__body,
-.font-size-default .el-form-item__label,
-.font-size-default .el-table {
-  font-size: 14px !important;
+.font-size-large .font-controls button {
+  padding: 0.75rem 1.25rem;
+  font-size: 18px;
 }
 
-.font-size-large p,
-.font-size-large span,
-.font-size-large div:not(.el-icon),
-.font-size-large .el-card__body,
-.font-size-large .el-form-item__label,
-.font-size-large .el-table {
-  font-size: 18px !important;
+.font-size-large .el-form-item__label {
+  line-height: 1.8;
 }
 
-/* 特殊元素的字体大小调整 */
-.font-size-small h1 { font-size: 1.8em !important; }
-.font-size-small h2 { font-size: 1.6em !important; }
-.font-size-small h3 { font-size: 1.4em !important; }
-.font-size-small .el-button { font-size: 12px !important; }
+.font-size-large .el-input__inner {
+  padding: 12px 16px;
+}
 
-.font-size-default h1 { font-size: 2em !important; }
-.font-size-default h2 { font-size: 1.8em !important; }
-.font-size-default h3 { font-size: 1.6em !important; }
-.font-size-default .el-button { font-size: 14px !important; }
-
-.font-size-large h1 { font-size: 2.4em !important; }
-.font-size-large h2 { font-size: 2.2em !important; }
-.font-size-large h3 { font-size: 2em !important; }
-.font-size-large .el-button { font-size: 18px !important; }
-.font-size-large .el-input__inner { font-size: 18px !important; }
-.font-size-large .el-card__body { font-size: 18px !important; }
+.font-size-large .el-button--large {
+  padding: 16px 24px;
+  min-height: 50px;
+}
 
 .app-header {
-  background: linear-gradient(135deg, #409EFF 0%, #67C23A 100%);
-  color: white;
+  background: #ffffff;
+  color: #059669;
   padding: 1rem 0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .header-content {
@@ -147,6 +148,8 @@ const setFontSize = (size: 'small' | 'default' | 'large') => {
   margin: 0;
   font-size: 1.8rem;
   font-weight: 600;
+  color: #059669;
+  letter-spacing: -0.5px;
 }
 
 .header-actions {
@@ -157,15 +160,16 @@ const setFontSize = (size: 'small' | 'default' | 'large') => {
 
 .app-main {
   flex: 1;
-  background-color: #f5f7fa;
+  background-color: #f9fafb;
 }
 
 .app-footer {
-  background-color: #2c3e50;
-  color: white;
+  background-color: #ffffff;
+  color: #6b7280;
   text-align: center;
   padding: 2rem 0;
   margin-top: auto;
+  border-top: 1px solid #e5e7eb;
 }
 
 .app-footer p {
@@ -186,5 +190,57 @@ const setFontSize = (size: 'small' | 'default' | 'large') => {
   --el-font-size-small: 10px;
   --el-font-size-large: 14px;
   --el-component-size: 28px;
+}
+
+/* Element Plus 样式优化 */
+:deep(.el-button--primary) {
+  background-color: #059669;
+  border-color: #059669;
+}
+
+:deep(.el-button--primary:hover) {
+  background-color: #047857;
+  border-color: #047857;
+}
+
+:deep(.el-card) {
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+}
+
+/* 大字模式下的表格和表单优化 */
+.font-size-large .el-table {
+  font-size: 18px;
+}
+
+.font-size-large .el-table th {
+  padding: 16px 12px;
+}
+
+.font-size-large .el-table td {
+  padding: 14px 12px;
+}
+
+.font-size-large .el-pagination {
+  font-size: 18px;
+}
+
+.font-size-large .el-pagination button {
+  min-width: 40px;
+  min-height: 40px;
+}
+
+.font-size-large .el-dialog__header {
+  font-size: 1.3rem;
+  padding: 20px 24px;
+}
+
+.font-size-large .el-dialog__body {
+  font-size: 18px;
+  padding: 24px;
+}
+
+.font-size-large .el-dialog__footer {
+  padding: 16px 24px;
 }
 </style>
