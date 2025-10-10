@@ -149,7 +149,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import { ArrowLeft } from '@element-plus/icons-vue'
 import { wheelchairApi, orderApi } from '@/api/wheelchair'
-import { getDefaultAddress, addUserAddress } from '@/api/userAddress'
+import { getDefaultAddress, addUserAddress, getUserAddresses } from '@/api/userAddress'
 import { useUserStore } from '@/stores/user'
 import type { Wheelchair } from '@/types/api'
 
@@ -254,30 +254,30 @@ const submitOrder = async () => {
         type: 'info'
       }
     )
-    
-    // 检查是否有默认地址，如果没有则询问是否保存为默认地址
-    let shouldSaveAsDefault = false;
-    try {
-      const response = await getDefaultAddress();
-      if (!response) {
-        const saveResult = await ElMessageBox.confirm(
-          '检测到您尚未设置默认收货地址，是否将当前信息保存为默认收货地址？',
-          '保存默认地址',
-          {
-            confirmButtonText: '保存',
-            cancelButtonText: '不保存',
-            type: 'question'
-          }
-        );
-        
-        shouldSaveAsDefault = saveResult !== 'cancel';
-      }
-    } catch (error) {
-      console.error('获取默认地址失败:', error);
-      // 继续执行，不影响订单流程
-    }
-    
+
     submitting.value = true
+
+    // 在提交订单前检查地址是否存在，若不存在则自动添加
+    try {
+      const addresses = await getUserAddresses()
+      const inputAddress = orderForm.address.trim()
+      const hasSameAddress = Array.isArray(addresses) && addresses.some(a => a.address.trim() === inputAddress)
+      
+      if (!hasSameAddress) {
+        await addUserAddress({
+          name: orderForm.name,
+          phone: orderForm.phone,
+          address: inputAddress,
+          is_default: false
+        })
+        ElMessage.success('已为您保存新的收货地址')
+      } else {
+        ElMessage.info('已使用您现有的收货地址')
+      }
+    } catch (addrErr) {
+      console.error('地址检查或保存失败:', addrErr)
+      // 静默失败，不影响订单创建流程
+    }
     
     // 创建预订单
     const tempOrderResponse = await orderApi.createTempOrder({
@@ -288,22 +288,6 @@ const submitOrder = async () => {
     })
     
     if (tempOrderResponse.code === 200 && tempOrderResponse.data) {
-      // 如果用户选择保存为默认地址，则在订单创建成功后保存
-      if (shouldSaveAsDefault) {
-        try {
-          await addUserAddress({
-            name: orderForm.name,
-            phone: orderForm.phone,
-            address: orderForm.address,
-            is_default: true
-          });
-          ElMessage.success('已保存为默认收货地址');
-        } catch (error) {
-          console.error('保存默认地址失败:', error);
-          // 保存地址失败不影响订单流程
-        }
-      }
-      
       // 跳转到支付页面
       router.push({
         name: 'Payment',
